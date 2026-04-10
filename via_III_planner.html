@@ -150,6 +150,20 @@
   .map-placeholder p { font-size: 13px; line-height: 1.7; max-width: 360px; opacity: 0.65; }
   #embedFrame { width: 100%; height: 100%; border: none; display: none; }
 
+  #officialMapFrame { position:absolute; inset:0; width:100%; height:100%; border:none; display:none; z-index:450; }
+  #kmlToggleBtn {
+    position: absolute; top: 10px; right: 10px; z-index: 470;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 5px 12px; border-radius: 4px; border: none;
+    background: rgba(15,15,15,0.78); color: white;
+    cursor: pointer; backdrop-filter: blur(3px);
+    transition: background .15s; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  #kmlToggleBtn:hover { background: rgba(232,133,10,0.9); }
+  #kmlToggleBtn.active { background: rgba(232,133,10,0.95); }
+
+
   /* ── COMPLIANCE PANEL ── */
   .compliance-panel {
     flex: 1;
@@ -394,7 +408,7 @@
         <div class="stat-item"><span class="stat-val" id="statTotal">~4,000</span><span class="stat-lbl">km total</span></div>
         <div class="stat-item"><span class="stat-val">~40k</span><span class="stat-lbl">m climbing</span></div>
         <div class="stat-item"><span class="stat-val">16</span><span class="stat-lbl">gates</span></div>
-        <div class="stat-item"><span class="stat-val">15</span><span class="stat-lbl">banned tunnels</span></div>
+        <div class="stat-item"><span class="stat-val">16</span><span class="stat-lbl">banned tunnels</span></div>
         <div class="stat-item"><span class="stat-val">8+</span><span class="stat-lbl">key ferries</span></div>
       </div>
 
@@ -413,6 +427,8 @@
             ✅ 16 mandatory gate proximity checks</p>
           </div>
           <div id="map" style="width:100%;height:100%"></div>
+          <button id="kmlToggleBtn" onclick="toggleOfficialMap()">🗺 Official Map</button>
+          <iframe id="officialMapFrame" src="" allowfullscreen></iframe>
           <div id="routingOverlay">
             <div class="routing-title">Computing Road Route</div>
             <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
@@ -455,6 +471,7 @@ const BANNED = [
   {name:'Morkaaastunnelen',         lat:62.1767, lng:6.0445,  r:300, type:'tunnel', note:'Near Volda. Use permitted ferry chain to bypass.'},
   {name:'Selvågtunnelen',           lat:62.2598, lng:5.8558,  r:300, type:'tunnel', note:'Near Ørsta/Volda. Use permitted ferries (Lote–Anda → Festøya → Lauvstad–Volda).'},
   {name:'Tunnel near Dovre',        lat:61.9875, lng:9.2434,  r:300, type:'tunnel', note:'Near Dombås/Dovre. Use Rv15 or alternative valley roads.'},
+  {name:'Oslofjordtunnelen',         lat:59.4530, lng:10.5540, r:400, type:'tunnel', note:"7,306m underwater tunnel — closed to cyclists, Norway's most accident-prone. Use Rv23 via Oslo or Moss–Horten ferry."},
 
   // Banned road sections (points near midpoint — 500m detection radius)
   {name:'E39 Vassenden–Skei',       lat:61.5200, lng:6.2900,  r:500, type:'road',   note:'Banned road section. Use Fv13 through the Gaularfjellet corridor instead.'},
@@ -513,6 +530,15 @@ const WPS = [
   {id:'f_putt', type:'ferry', seq:'⛴', name:'Puttgarden–Rødby Ferry', lat:54.5009, lng:11.2260, country:'DE→DK', note:'Permitted ✅. ~45 min. Walk-on.', tags:[{l:'PERMITTED',c:'permitted'}]},
   {id:'f_hels', type:'ferry', seq:'⛴', name:'Helsingør–Helsingborg Ferry', lat:56.0328, lng:12.6167, country:'DK→SE', note:'THE mandatory DK→SE crossing ✅. 20 min, every 20 min. All other DK→SE ferries BANNED.', tags:[{l:'PERMITTED',c:'permitted'},{l:'ONLY VALID DK→SE',c:'warning'}]},
   {id:'svine', type:'waypoint', seq:'🌉', name:'Svinesund Bridge (SE→NO)', lat:59.0944, lng:11.2518, country:'SE→NO', note:'Legal cycle path alongside E6 arch bridge. FREE.', tags:[{l:'CYCLE PATH',c:'permitted'}]},
+  {id:'moss_ferry', type:'ferry', seq:'⛴', name:'Moss–Horten Ferry (Moss side)',
+   lat:59.4356, lng:10.6573, country:'NO',
+   note:'Permitted ✅. Moss–Horten car/passenger ferry crosses the Oslofjord. Avoids the banned Oslofjordtunnelen. Frequent departures, walk-on. Book via ruter.no or Bastø Fosen.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS OSLOFJORDTUNNELEN',c:'permitted'}]},
+  {id:'horten', type:'waypoint', seq:'·', name:'Horten (after Moss–Horten ferry)',
+   lat:59.4117, lng:10.4833, country:'NO',
+   note:'West side arrival after Moss–Horten ferry. Continue west on Rv19/Rv35 toward Kongsberg and Drammen.', tags:[]},
+  {id:'drammen', type:'waypoint', seq:'·', name:'Drammen, Norway',
+   lat:59.7439, lng:10.2045, country:'NO',
+   note:'Overland corridor west of Oslo. Routes via Drammen on Rv23/Rv35 avoid the E6 tunnel cluster and banned Oslofjordtunnelen. Continue southwest toward Kongsberg and Numedal valley.', tags:[]},
   {id:'g2', type:'gate', seq:'II', name:'Gate II — Fredriksten Fortress', lat:59.11994, lng:11.39534, country:'NO', note:'Open 24 hours. Avoid fast E18.', tags:[]},
   {id:'g3', type:'gate', seq:'III', name:'Gate III — Suleskard (1,050m)', lat:59.04283, lng:7.14565, country:'NO', note:'Approach from east on Rv9/Fv468 — paved.', tags:[]},
   {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge (TBC — Sirdal corridor)', lat:59.06, lng:6.90, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}]},
@@ -551,7 +577,7 @@ const WPS = [
 const LEGS = [
   {id:'L1', name:'Start → Gate I (Brocken)',              wps:['start','g1'],                         dist:'~480km'},
   {id:'L2', name:'Brocken → Gate II via Sweden',          wps:['g1','f_putt','rodby','naestved','rungsted','helsingor','f_hels','helsingborg','halmstad','gothenburg','uddevalla','stromstad','svine','g2'],  dist:'~620km'},
-  {id:'L3', name:'Gate II → Gate III + Refuge',           wps:['g2','g3','refuge'],                   dist:'~380km'},
+  {id:'L3', name:'Gate II → Gate III + Refuge',           wps:['g2','moss_ferry','horten','drammen','g3','refuge'],                   dist:'~380km'},
   {id:'L4', name:'Gate IV Lysebotn + Ferry',              wps:['g4','f_lyse'],                        dist:'~60km'},
   {id:'L5', name:'Gates V, IX, X, XI (Stave churches)',   wps:['g5','g9','f_solv','g10','g11'],       dist:'~420km'},
   {id:'L6', name:'Gates VI–VIII (Sognefjellet loop)',     wps:['g6','g7','g8'],                       dist:'~280km'},
@@ -611,7 +637,8 @@ const CORRIDOR = [
     note:'Recommended Sweden→Norway crossing. Use the old lower bridge alongside the E6 arch — it has a dedicated cycle path.' },
 
   // ── LEG 3: Gate II → Gate III + Refuge ───────────────────────
-  { leg:'L3', name:'Rv9 corridor (Kristiansand hinterland)', lat:58.5760, lng:7.9964, r:20000,
+  {leg:'L3',name:'Drammen (avoid E6/Oslo tunnel cluster)',lat:59.7439,lng:10.2045,r:10000,note:'Route via Drammen on Rv23/Rv35 avoids the E6 motorway tunnels near Oslo and the banned Oslofjordtunnelen. Continue southwest through Kongsberg and Numedal toward Rv9.'},
+  {leg:'L3', name:'Rv9 corridor (Kristiansand hinterland)', lat:58.5760, lng:7.9964, r:20000,
     note:'Recommended inland corridor via Rv9 toward Suleskard. Avoid fast E18 coastal road.' },
 
   // ── LEG 4: Gate IV — Lysebotn ────────────────────────────────
@@ -1896,6 +1923,31 @@ function loadGPXFile(event, routeName) {
 
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+
+// ── OFFICIAL RACE MAP TOGGLE ──────────────────────────────────
+const OFFICIAL_MAP_URL = 'https://www.google.com/maps/d/embed?mid=1ViwBu_vQsMQ3aMALsrIynLSTDilG5mg&ehbc=2E312F';
+let officialMapVisible = false;
+
+function toggleOfficialMap() {
+  const frame = document.getElementById('officialMapFrame');
+  const btn   = document.getElementById('kmlToggleBtn');
+  officialMapVisible = !officialMapVisible;
+  if (officialMapVisible) {
+    // Lazy-load the iframe src on first open
+    if (!frame.getAttribute('src')) frame.setAttribute('src', OFFICIAL_MAP_URL);
+    frame.style.display = 'block';
+    btn.classList.add('active');
+    btn.innerHTML = '✕ Close';
+    showToast('Loading official race map...', 'info');
+  } else {
+    frame.style.display = 'none';
+    btn.classList.remove('active');
+    btn.innerHTML = '🗺 Official Map';
+    // Invalidate Leaflet size since it was hidden under the iframe
+    if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 50);
+  }
+}
 
 init();
 </script>
