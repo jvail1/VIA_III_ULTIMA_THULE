@@ -2,9 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>VIA Chapter III — Ultima Thule Route Planner</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8410a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VIA Planner">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap');
 
@@ -42,7 +52,7 @@
 
   /* ── APP ── */
   #app { display: none; flex-direction: column; height: 100vh; }
-  header { background: var(--ink); color: var(--paper); padding: 13px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 3px solid var(--accent); flex-shrink: 0; }
+  header { background: var(--ink); color: var(--paper); padding: 13px 20px; padding-top: max(13px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px; border-bottom: 3px solid var(--accent); flex-shrink: 0; }
   header h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
   header .sub { font-family: 'DM Mono', monospace; font-size: 10px; color: #999; letter-spacing: 0.06em; }
   .user-pill { margin-left: auto; display: flex; align-items: center; gap: 7px; font-family: 'DM Mono', monospace; font-size: 10px; color: #7ddb8f; background: #1a4a25; padding: 4px 10px; border-radius: 20px; flex-shrink: 0; }
@@ -408,7 +418,7 @@
         <div class="stat-item"><span class="stat-val" id="statTotal">~4,000</span><span class="stat-lbl">km total</span></div>
         <div class="stat-item"><span class="stat-val">~40k</span><span class="stat-lbl">m climbing</span></div>
         <div class="stat-item"><span class="stat-val">16</span><span class="stat-lbl">gates</span></div>
-        <div class="stat-item"><span class="stat-val">16</span><span class="stat-lbl">banned tunnels</span></div>
+        <div class="stat-item"><span class="stat-val">17</span><span class="stat-lbl">banned tunnels</span></div>
         <div class="stat-item"><span class="stat-val">8+</span><span class="stat-lbl">key ferries</span></div>
       </div>
 
@@ -472,6 +482,7 @@ const BANNED = [
   {name:'Selvågtunnelen',           lat:62.2598, lng:5.8558,  r:300, type:'tunnel', note:'Near Ørsta/Volda. Use permitted ferries (Lote–Anda → Festøya → Lauvstad–Volda).'},
   {name:'Tunnel near Dovre',        lat:61.9875, lng:9.2434,  r:300, type:'tunnel', note:'Near Dombås/Dovre. Use Rv15 or alternative valley roads.'},
   {name:'Oslofjordtunnelen',         lat:59.4530, lng:10.5540, r:400, type:'tunnel', note:"7,306m underwater tunnel — closed to cyclists, Norway's most accident-prone. Use Rv23 via Oslo or Moss–Horten ferry."},
+  {name:'Grasdaltunnelen',            lat:62.0891, lng:7.1506,  r:300, type:'tunnel', note:'On Rv15 between Stryn and Rv63 toward Geiranger. Bike-banned. Use Rv258/old surface bypass road above the tunnel to reach Rv63 legally.'},
 
   // Banned road sections (points near midpoint — 500m detection radius)
   {name:'E39 Vassenden–Skei',       lat:61.5200, lng:6.2900,  r:500, type:'road',   note:'Banned road section. Use Fv13 through the Gaularfjellet corridor instead.'},
@@ -513,6 +524,9 @@ const GATES = [
   {id:'g7',     name:'Gate VII — Gaularfjellet',  lat:61.35147, lng:6.5184,   r:500},
   {id:'g8',     name:'Gate VIII — Strynefjellsveg',lat:61.95081,lng:7.3298,   r:500},
   {id:'g9',     name:'Gate IX — Borgund',         lat:61.04738, lng:7.81278,  r:400},
+  {id:'ornes', type:'waypoint', seq:'·', name:'Ornes (after Solvorn ferry)',
+   lat:61.3021, lng:7.3367, country:'NO',
+   note:'Road arrival after Solvorn–Ornes ferry. Urnes Stave Church (Gate X) is 2km north.', tags:[]},
   {id:'g10',    name:'Gate X — Urnes',            lat:61.29813, lng:7.32198,  r:400},
   {id:'g11',    name:'Gate XI — Lom',             lat:61.83953, lng:8.56631,  r:400},
   {id:'g12',    name:'Gate XII — Svøufallet',     lat:62.50932, lng:9.06695,  r:500},
@@ -536,14 +550,14 @@ const WPS = [
   {id:'horten', type:'waypoint', seq:'·', name:'Horten (after Moss–Horten ferry)',
    lat:59.4117, lng:10.4833, country:'NO',
    note:'West side arrival after Moss–Horten ferry. Continue west on Rv19/Rv35 toward Kongsberg and Drammen.', tags:[]},
-  {id:'drammen', type:'waypoint', seq:'·', name:'Drammen, Norway',
-   lat:59.7439, lng:10.2045, country:'NO',
-   note:'Overland corridor west of Oslo. Routes via Drammen on Rv23/Rv35 avoid the E6 tunnel cluster and banned Oslofjordtunnelen. Continue southwest toward Kongsberg and Numedal valley.', tags:[]},
   {id:'g2', type:'gate', seq:'II', name:'Gate II — Fredriksten Fortress', lat:59.11994, lng:11.39534, country:'NO', note:'Open 24 hours. Avoid fast E18.', tags:[]},
   {id:'g3', type:'gate', seq:'III', name:'Gate III — Suleskard (1,050m)', lat:59.04283, lng:7.14565, country:'NO', note:'Approach from east on Rv9/Fv468 — paved.', tags:[]},
   {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge (TBC — Sirdal corridor)', lat:59.06, lng:6.90, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}]},
   {id:'g4', type:'gate', seq:'IV', name:'Gate IV — Lysebotn', lat:59.05483, lng:6.64508, country:'NO', note:'BOOK FERRY AHEAD: Lysebotn–Forsand. billetter.kolumbus.no', tags:[{l:'BOOK FERRY AHEAD',c:'warning'}]},
   {id:'f_lyse', type:'ferry', seq:'⛴', name:'Lysebotn–Forsand Ferry', lat:59.0547, lng:6.6452, country:'NO', note:'Permitted ✅ — BOOK IN ADVANCE. Sells out in summer.', tags:[{l:'PERMITTED',c:'permitted'},{l:'BOOK IN ADVANCE',c:'warning'}]},
+  {id:'forsand', type:'waypoint', seq:'·', name:'Forsand (after Lysebotn ferry)',
+   lat:59.0427, lng:6.2280, country:'NO',
+   note:'Road arrival after Lysebotn–Forsand ferry. Continue north via Rv13 and Rv520 toward Hardanger and Vøringsfossen.', tags:[]},
   {id:'g5', type:'gate', seq:'V', name:'Gate V — Vøringsfossen', lat:60.42783, lng:7.2533, country:'NO', note:'Right beside Rv7 — minimal detour.', tags:[]},
   {id:'g9', type:'gate', seq:'IX', name:'Gate IX — Borgund Stave Church', lat:61.04738, lng:7.81278, country:'NO', note:'AVOID Laerdalstunnelen (BANNED). Use Rv50 Filefjell.', tags:[{l:'LAERDALSTUNNELEN BANNED',c:'banned'}]},
   {id:'f_solv', type:'ferry', seq:'⛴', name:'Solvorn–Ornes Ferry', lat:61.3011, lng:7.2468, country:'NO', note:'Permitted ✅ (confirmed KML Oct 2025). For Urnes Stave Church.', tags:[{l:'PERMITTED',c:'permitted'}]},
@@ -554,11 +568,17 @@ const WPS = [
   {id:'g8', type:'gate', seq:'VIII', name:'Gate VIII — Strynefjellsveg (1,139m)', lat:61.95081, lng:7.3298, country:'NO', note:'Use Gamle Strynefjellsveg. AVOID Kvivstunnelen and Oppljostunnelen (BANNED).', tags:[{l:'KVIVSTUNNELEN BANNED',c:'banned'},{l:'OPPLJOSTUNNELEN BANNED',c:'banned'}]},
   {id:'g14', type:'gate', seq:'XIV', name:'Gate XIV — Dalsnibba (1,476m)', lat:62.04885, lng:7.26859, country:'NO', note:'Toll road FREE for cyclists. AVOID Hellesylt tunnel NORTHBOUND (BANNED).', tags:[{l:'HELLESYLT TUNNEL ↑ BANNED',c:'banned'}]},
   {id:'g13', type:'gate', seq:'XIII', name:'Gate XIII — Trollstigen (852m)', lat:62.4546, lng:7.66918, country:'NO', note:'From Åndalsnes (north). AVOID Innfjord tunnel (BANNED).', tags:[{l:'INNFJORD TUNNEL BANNED',c:'banned'}]},
+  {id:'andalsnes', type:'waypoint', seq:'·', name:'Åndalsnes',
+   lat:62.5680, lng:7.7147, country:'NO',
+   note:'Routing waypoint between Trollstigen (XIII) and Svøufallet (XII). Rv70 east toward Sunndalsøra.', tags:[]},
   {id:'g12', type:'gate', seq:'XII', name:'Gate XII — Svøufallet', lat:62.50932, lng:9.06695, country:'NO', note:'East detour on Rv70 toward Sunndalsøra — flat valley road.', tags:[]},
   {id:'g15', type:'gate', seq:'XV', name:'Gate XV — Atlantic Ocean Road', lat:63.0098, lng:7.43054, country:'NO', note:'Flat causeway. Use Molde–Vestnes ferry (permitted ✅).', tags:[{l:'FLAT & FAST',c:'permitted'}]},
   {id:'g16', type:'gate', seq:'XVI', name:'Gate XVI — Vestkapp (310m)', lat:62.18652, lng:5.12587, country:'NO', note:'Final gate. Use Lote–Anda ferry after.', tags:[]},
   {id:'f_lote', type:'ferry', seq:'⛴', name:'Lote–Anda Ferry', lat:61.8544, lng:6.0813, country:'NO', note:'Permitted ✅. Avoids all banned E39+tunnels near Volda.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS BANNED E39+TUNNELS',c:'permitted'}]},
   {id:'f_fest', type:'ferry', seq:'⛴', name:'Festøya Ferry', lat:62.3749, lng:6.3315, country:'NO', note:'Permitted ✅. ~20 min crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'festoya_land', type:'waypoint', seq:'·', name:'Festøya (east side arrival)',
+   lat:62.3631, lng:6.3080, country:'NO',
+   note:'Road arrival on east side after Festøya ferry. Continue south on Fv61 toward Lauvstad–Volda ferry.', tags:[]},
   {id:'f_lauv', type:'ferry', seq:'⛴', name:'Lauvstad–Volda Ferry', lat:62.1646, lng:5.9425, country:'NO', note:'Permitted ✅. Final ferry into Volda.', tags:[{l:'PERMITTED',c:'permitted'}]},
     // ── INTERMEDIATE ROUTING WAYPOINTS ──────────────────────────
   {id:'rodby',       type:'waypoint', seq:'·', name:'Rødby, Denmark',               lat:54.6927, lng:11.3855, country:'DK', note:'DK arrival from Puttgarden–Rødby ferry. Head northwest via Lolland then E47/Route 1 toward Copenhagen.', tags:[]},
@@ -577,13 +597,13 @@ const WPS = [
 const LEGS = [
   {id:'L1', name:'Start → Gate I (Brocken)',              wps:['start','g1'],                         dist:'~480km'},
   {id:'L2', name:'Brocken → Gate II via Sweden',          wps:['g1','f_putt','rodby','naestved','rungsted','helsingor','f_hels','helsingborg','halmstad','gothenburg','uddevalla','stromstad','svine','g2'],  dist:'~620km'},
-  {id:'L3', name:'Gate II → Gate III + Refuge',           wps:['g2','moss_ferry','horten','drammen','g3','refuge'],                   dist:'~380km'},
-  {id:'L4', name:'Gate IV Lysebotn + Ferry',              wps:['g4','f_lyse'],                        dist:'~60km'},
-  {id:'L5', name:'Gates V, IX, X, XI (Stave churches)',   wps:['g5','g9','f_solv','g10','g11'],       dist:'~420km'},
+  {id:'L3', name:'Gate II → Gate III + Refuge',           wps:['g2','moss_ferry','horten','g3','refuge'],                   dist:'~380km'},
+  {id:'L4', name:'Gate IV Lysebotn + Ferry',              wps:['g4','f_lyse','forsand'],                        dist:'~60km'},
+  {id:'L5', name:'Gates V, IX, X, XI (Stave churches)',   wps:['g5','g9','f_solv','ornes','g10','g11'],       dist:'~420km'},
   {id:'L6', name:'Gates VI–VIII (Sognefjellet loop)',     wps:['g6','g7','g8'],                       dist:'~280km'},
-  {id:'L7', name:'Gates XII–XIV (Dalsnibba+Trollstigen)', wps:['g14','g13','g12'],                    dist:'~310km'},
+  {id:'L7', name:'Gates XII–XIV (Dalsnibba+Trollstigen)', wps:['g14','g13','andalsnes','g12'],                    dist:'~310km'},
   {id:'L8', name:'Gate XV — Atlantic Ocean Road',         wps:['g15'],                                dist:'~80km'},
-  {id:'L9', name:'Gate XVI → Finish via ferries',         wps:['g16','f_lote','anda','f_fest','f_lauv','finish'], dist:'~120km'},
+  {id:'L9', name:'Gate XVI → Finish via ferries',         wps:['g16','f_lote','anda','f_fest','festoya_land','f_lauv','finish'], dist:'~120km'},
 ];
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -637,7 +657,6 @@ const CORRIDOR = [
     note:'Recommended Sweden→Norway crossing. Use the old lower bridge alongside the E6 arch — it has a dedicated cycle path.' },
 
   // ── LEG 3: Gate II → Gate III + Refuge ───────────────────────
-  {leg:'L3',name:'Drammen (avoid E6/Oslo tunnel cluster)',lat:59.7439,lng:10.2045,r:10000,note:'Route via Drammen on Rv23/Rv35 avoids the E6 motorway tunnels near Oslo and the banned Oslofjordtunnelen. Continue southwest through Kongsberg and Numedal toward Rv9.'},
   {leg:'L3', name:'Rv9 corridor (Kristiansand hinterland)', lat:58.5760, lng:7.9964, r:20000,
     note:'Recommended inland corridor via Rv9 toward Suleskard. Avoid fast E18 coastal road.' },
 
@@ -1564,6 +1583,7 @@ let recommendedVisible = true;
 
 let leafletMap = null;
 let routeLayerGroup = null;
+let wpPulseGroup = null;
 
 function initMap() {
   if (leafletMap) return;
@@ -1575,6 +1595,7 @@ function initMap() {
   routeLayerGroup       = L.layerGroup().addTo(leafletMap);
   recommendedLayerGroup = L.layerGroup().addTo(leafletMap);
   wpMarkerGroup         = L.layerGroup().addTo(leafletMap);
+  wpPulseGroup          = L.layerGroup().addTo(leafletMap);
   leafletMap.fitBounds([[51.5, 4.5], [63.5, 12.5]]);
   drawRecommendedRoute();
   placeWaypointMarkers();
@@ -1725,25 +1746,33 @@ function selectWp(i) {
   selWp = i;
   renderWaypoints();
   const wp = WPS[i];
-  document.getElementById('detailBar').innerHTML = `<h2>${wp.name}</h2>`;
 
-  // Collapse compliance panel when viewing a waypoint
-  document.getElementById('compliancePanel').style.display = 'none';
-  document.getElementById('mapAreaWrap').className = 'map-area full';
+  // Only collapse compliance panel if an inspected RWGPS route is active
+  if (selRoute) {
+    document.getElementById('compliancePanel').style.display = 'none';
+    document.getElementById('mapAreaWrap').className = 'map-area full';
+    routeLayerGroup.clearLayers();
+  }
   setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
 
-  // Show waypoint on map
+  // Build detail bar badges
+  const badges = wp.tags.map(t => {
+    const cls = t.c==='banned'?'red':t.c==='permitted'?'green':'amber';
+    return `<span class="badge ${cls}">${t.l}</span>`;
+  }).join('');
+  document.getElementById('detailBar').innerHTML = `<h2>${wp.name}</h2>${badges}`;
+
   initMap();
-  // Only clear route layers if an inspected RWGPS route is active — preserve OSRM preview
-  if (selRoute) routeLayerGroup.clearLayers();
-  leafletMap.setView([wp.lat, wp.lng], 13);
+  // Clear only the pulse marker, never the route polylines
+  if (wpPulseGroup) wpPulseGroup.clearLayers();
+  leafletMap.setView([wp.lat, wp.lng], Math.max(leafletMap.getZoom(), 11), {animate: true});
+  const col = {gate:'#1a5c8a',ferry:'#6b4a1a',refuge:'#2a7a3b',start:'#0f0f0f',finish:'#c8410a'};
   L.circleMarker([wp.lat, wp.lng], {
     radius: 10, color: 'white', weight: 2,
-    fillColor: wp.type === 'gate' ? '#1a5c8a' : wp.type === 'ferry' ? '#6b4a1a' : wp.type === 'refuge' ? '#2a7a3b' : '#c8410a',
-    fillOpacity: 1
+    fillColor: col[wp.type] || '#888', fillOpacity: 1
   }).bindPopup(`<div class="violation-popup"><h4>${wp.name}</h4><p>${wp.note}</p><br>
     <a href="https://ridewithgps.com/routes/new?start_lat=${wp.lat}&start_lng=${wp.lng}" target="_blank">Plan from here on RWGPS ↗</a></div>`)
-    .addTo(routeLayerGroup).openPopup();
+    .addTo(wpPulseGroup).openPopup();
 }
 
 // ── LEGS ──────────────────────────────────────────────────────
@@ -1947,6 +1976,15 @@ function toggleOfficialMap() {
     // Invalidate Leaflet size since it was hidden under the iframe
     if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 50);
   }
+}
+
+// ── SERVICE WORKER (PWA offline support) ─────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
 }
 
 init();
