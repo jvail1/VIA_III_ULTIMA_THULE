@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -382,6 +383,7 @@
     <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
     <label class="login-label" for="loginToken">Auth token (optional)</label>
     <input class="login-input" type="text" id="loginToken" placeholder="Paste RideWithGPS auth_token" autocomplete="off" spellcheck="false">
+    <div class="api-note" style="margin-top:-4px;margin-bottom:14px"><strong>Manual token mode:</strong> if a valid auth_token is pasted, the app will open immediately and test RWGPS sync by loading your routes. This avoids brittle browser-side token validation.</div>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">
       <span id="loginBtnText">Sign in to RideWithGPS</span>
     </button>
@@ -552,9 +554,6 @@ const GATES = [
   {id:'g7',     name:'Gate VII — Gaularfjellet',  lat:61.35147, lng:6.5184,   r:500},
   {id:'g8',     name:'Gate VIII — Strynefjellsveg',lat:61.95081,lng:7.3298,   r:500},
   {id:'g9',     name:'Gate IX — Borgund',         lat:61.04738, lng:7.81278,  r:400},
-  {id:'ornes', type:'waypoint', seq:'·', name:'Ornes (after Solvorn ferry)',
-   lat:61.3021, lng:7.3367, country:'NO',
-   note:'Road arrival after Solvorn–Ornes ferry. Urnes Stave Church (Gate X) is 2km north.', tags:[]},
   {id:'g10',    name:'Gate X — Urnes',            lat:61.29813, lng:7.32198,  r:400},
   {id:'g11',    name:'Gate XI — Lom',             lat:61.83953, lng:8.56631,  r:400},
   {id:'g12',    name:'Gate XII — Svøufallet',     lat:62.50932, lng:9.06695,  r:500},
@@ -570,15 +569,24 @@ const WPS = [
   {id:'start', type:'start', seq:'S', name:'De Proloog, Amerongen', lat:52.00384, lng:5.46146, country:'NL', note:'Race starts 07:00 on 24 July 2026. Sign-on 23 July 09:00–17:00.', tags:[]},
   {id:'g1', type:'gate', seq:'I', name:'Gate I — Brocken (1,141m)', lat:51.79895, lng:10.61544, country:'DE', note:'Approach from Wernigerode via B244. Avoid Brockenbahn rail road.', tags:[]},
   {id:'f_putt', type:'ferry', seq:'⛴', name:'Puttgarden–Rødby Ferry', lat:54.5009, lng:11.2260, country:'DE→DK', note:'Permitted ✅. ~45 min. Walk-on.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'rodby',       type:'waypoint', seq:'·', name:'Rødby, Denmark',               lat:54.6927, lng:11.3855, country:'DK', note:'DK arrival from Puttgarden–Rødby ferry. Head northwest via Lolland then E47/Route 1 toward Copenhagen.', tags:[]},
+  {id:'naestved',    type:'waypoint', seq:'·', name:'Næstved, Denmark',              lat:55.2295, lng:11.7648, country:'DK', note:'Denmark routing waypoint. Follow E47 north toward Copenhagen and Helsingør.', tags:[]},
+    {id:'rungsted',   type:'waypoint', seq:'·', name:'Rungsted, Denmark',             lat:55.8833, lng:12.5333, country:'DK', note:'Coastal road (Strandvejen/Route 152) north of Copenhagen toward Helsingør. Avoids the Øresund bridge detour via Malmö.', tags:[]},
+  {id:'helsingor',   type:'waypoint', seq:'·', name:'Helsingør, Denmark',            lat:56.0360, lng:12.6136, country:'DK', note:'Approach the Helsingør–Helsingborg ferry terminal. Only permitted DK→SE crossing.', tags:[{l:'FERRY DEPARTURE',c:'warning'}]},
   {id:'f_hels', type:'ferry', seq:'⛴', name:'Helsingør–Helsingborg Ferry', lat:56.0328, lng:12.6167, country:'DK→SE', note:'THE mandatory DK→SE crossing ✅. 20 min, every 20 min. All other DK→SE ferries BANNED.', tags:[{l:'PERMITTED',c:'permitted'},{l:'ONLY VALID DK→SE',c:'warning'}]},
+  {id:'helsingborg', type:'waypoint', seq:'·', name:'Helsingborg, Sweden',           lat:56.0469, lng:12.6899, country:'SE', note:'SE arrival after Helsingør ferry. Head north on Route 111 / Cykelspåret. Avoid E6 motorway.', tags:[]},
+  {id:'halmstad',    type:'waypoint', seq:'·', name:'Halmstad, Sweden',              lat:56.6745, lng:12.8577, country:'SE', note:'Swedish west-coast corridor. Continue north on smaller roads. Avoid E6.', tags:[]},
+  {id:'gothenburg',  type:'waypoint', seq:'·', name:'Gothenburg, Sweden',            lat:57.7072, lng:11.9668, country:'SE', note:'Major routing node. Follow Route 155 / coastal roads north toward Uddevalla. Avoid E6.', tags:[]},
+  {id:'uddevalla',   type:'waypoint', seq:'·', name:'Uddevalla, Sweden',             lat:58.3480, lng:11.9386, country:'SE', note:'Swedish coast waypoint north of Gothenburg. Continue on Route 162 north toward Strömstad.', tags:[]},
+  {id:'stromstad',   type:'waypoint', seq:'·', name:'Strömstad, Sweden',             lat:58.9379, lng:11.1705, country:'SE', note:'Final Swedish waypoint before Svinesund border crossing. Follow Route 176 southeast to the bridge.', tags:[]},
   {id:'svine', type:'waypoint', seq:'🌉', name:'Svinesund Bridge (SE→NO)', lat:59.0944, lng:11.2518, country:'SE→NO', note:'Legal cycle path alongside E6 arch bridge. FREE.', tags:[{l:'CYCLE PATH',c:'permitted'}]},
+  {id:'g2', type:'gate', seq:'II', name:'Gate II — Fredriksten Fortress', lat:59.11994, lng:11.39534, country:'NO', note:'Open 24 hours. Avoid fast E18.', tags:[]},
   {id:'moss_ferry', type:'ferry', seq:'⛴', name:'Moss–Horten Ferry (Moss side)',
    lat:59.4356, lng:10.6573, country:'NO',
    note:'Permitted ✅. Moss–Horten car/passenger ferry crosses the Oslofjord. Avoids the banned Oslofjordtunnelen. Frequent departures, walk-on. Book via ruter.no or Bastø Fosen.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS OSLOFJORDTUNNELEN',c:'permitted'}]},
   {id:'horten', type:'waypoint', seq:'·', name:'Horten (after Moss–Horten ferry)',
    lat:59.4117, lng:10.4833, country:'NO',
    note:'West side arrival after Moss–Horten ferry. Continue west on Rv19/Rv35 toward Kongsberg and Drammen.', tags:[]},
-  {id:'g2', type:'gate', seq:'II', name:'Gate II — Fredriksten Fortress', lat:59.11994, lng:11.39534, country:'NO', note:'Open 24 hours. Avoid fast E18.', tags:[]},
   {id:'g3', type:'gate', seq:'III', name:'Gate III — Suleskard (1,050m)', lat:59.04283, lng:7.14565, country:'NO', note:'Approach from east on Rv9/Fv468 — paved.', tags:[]},
   {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge (TBC — Sirdal corridor)', lat:59.06, lng:6.90, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}]},
   {id:'g4', type:'gate', seq:'IV', name:'Gate IV — Lysebotn', lat:59.05483, lng:6.64508, country:'NO', note:'BOOK FERRY AHEAD: Lysebotn–Forsand. billetter.kolumbus.no', tags:[{l:'BOOK FERRY AHEAD',c:'warning'}]},
@@ -589,6 +597,9 @@ const WPS = [
   {id:'g5', type:'gate', seq:'V', name:'Gate V — Vøringsfossen', lat:60.42783, lng:7.2533, country:'NO', note:'Right beside Rv7 — minimal detour.', tags:[]},
   {id:'g9', type:'gate', seq:'IX', name:'Gate IX — Borgund Stave Church', lat:61.04738, lng:7.81278, country:'NO', note:'AVOID Laerdalstunnelen (BANNED). Use Rv50 Filefjell.', tags:[{l:'LAERDALSTUNNELEN BANNED',c:'banned'}]},
   {id:'f_solv', type:'ferry', seq:'⛴', name:'Solvorn–Ornes Ferry', lat:61.3011, lng:7.2468, country:'NO', note:'Permitted ✅ (confirmed KML Oct 2025). For Urnes Stave Church.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'ornes', type:'waypoint', seq:'·', name:'Ornes (after Solvorn ferry)',
+   lat:61.3021, lng:7.3367, country:'NO',
+   note:'Road arrival after Solvorn–Ornes ferry. Urnes Stave Church (Gate X) is 2km north.', tags:[]},
   {id:'g10', type:'gate', seq:'X', name:'Gate X — Urnes Stave Church', lat:61.29813, lng:7.32198, country:'NO', note:'AVOID Fodnestunnelen and Amlatunnelen (both BANNED).', tags:[{l:'FODNESTUNNELEN BANNED',c:'banned'},{l:'AMLATUNNELEN BANNED',c:'banned'}]},
   {id:'g11', type:'gate', seq:'XI', name:'Gate XI — Lom Stave Church', lat:61.83953, lng:8.56631, country:'NO', note:'AVOID E6 Sel–Dombås (BANNED road section).', tags:[{l:'E6 SEL–DOMBÅS BANNED',c:'banned'}]},
   {id:'g6', type:'gate', seq:'VI', name:'Gate VI — Sognefjellet (1,434m)', lat:61.55272, lng:7.93937, country:'NO', note:'Highest gate. Rv55. AVOID Gudvangatunnelen (BANNED).', tags:[{l:'GUDVANGATUNNELEN BANNED',c:'banned'}]},
@@ -603,22 +614,13 @@ const WPS = [
   {id:'g15', type:'gate', seq:'XV', name:'Gate XV — Atlantic Ocean Road', lat:63.0098, lng:7.43054, country:'NO', note:'Flat causeway. Use Molde–Vestnes ferry (permitted ✅).', tags:[{l:'FLAT & FAST',c:'permitted'}]},
   {id:'g16', type:'gate', seq:'XVI', name:'Gate XVI — Vestkapp (310m)', lat:62.18652, lng:5.12587, country:'NO', note:'Final gate. Use Lote–Anda ferry after.', tags:[]},
   {id:'f_lote', type:'ferry', seq:'⛴', name:'Lote–Anda Ferry', lat:61.8544, lng:6.0813, country:'NO', note:'Permitted ✅. Avoids all banned E39+tunnels near Volda.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS BANNED E39+TUNNELS',c:'permitted'}]},
+  {id:'anda',        type:'waypoint', seq:'·', name:'Anda (after Lote–Anda ferry)',  lat:61.9628, lng:6.1218,  country:'NO', note:'NO arrival after Lote–Anda ferry. Continue north on Fv651 toward Festøya.', tags:[]},
   {id:'f_fest', type:'ferry', seq:'⛴', name:'Festøya Ferry', lat:62.3749, lng:6.3315, country:'NO', note:'Permitted ✅. ~20 min crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
   {id:'festoya_land', type:'waypoint', seq:'·', name:'Festøya (east side arrival)',
    lat:62.3631, lng:6.3080, country:'NO',
    note:'Road arrival on east side after Festøya ferry. Continue south on Fv61 toward Lauvstad–Volda ferry.', tags:[]},
   {id:'f_lauv', type:'ferry', seq:'⛴', name:'Lauvstad–Volda Ferry', lat:62.1646, lng:5.9425, country:'NO', note:'Permitted ✅. Final ferry into Volda.', tags:[{l:'PERMITTED',c:'permitted'}]},
-    // ── INTERMEDIATE ROUTING WAYPOINTS ──────────────────────────
-  {id:'rodby',       type:'waypoint', seq:'·', name:'Rødby, Denmark',               lat:54.6927, lng:11.3855, country:'DK', note:'DK arrival from Puttgarden–Rødby ferry. Head northwest via Lolland then E47/Route 1 toward Copenhagen.', tags:[]},
-  {id:'naestved',    type:'waypoint', seq:'·', name:'Næstved, Denmark',              lat:55.2295, lng:11.7648, country:'DK', note:'Denmark routing waypoint. Follow E47 north toward Copenhagen and Helsingør.', tags:[]},
-    {id:'rungsted',   type:'waypoint', seq:'·', name:'Rungsted, Denmark',             lat:55.8833, lng:12.5333, country:'DK', note:'Coastal road (Strandvejen/Route 152) north of Copenhagen toward Helsingør. Avoids the Øresund bridge detour via Malmö.', tags:[]},
-  {id:'helsingor',   type:'waypoint', seq:'·', name:'Helsingør, Denmark',            lat:56.0360, lng:12.6136, country:'DK', note:'Approach the Helsingør–Helsingborg ferry terminal. Only permitted DK→SE crossing.', tags:[{l:'FERRY DEPARTURE',c:'warning'}]},
-  {id:'helsingborg', type:'waypoint', seq:'·', name:'Helsingborg, Sweden',           lat:56.0469, lng:12.6899, country:'SE', note:'SE arrival after Helsingør ferry. Head north on Route 111 / Cykelspåret. Avoid E6 motorway.', tags:[]},
-  {id:'halmstad',    type:'waypoint', seq:'·', name:'Halmstad, Sweden',              lat:56.6745, lng:12.8577, country:'SE', note:'Swedish west-coast corridor. Continue north on smaller roads. Avoid E6.', tags:[]},
-  {id:'gothenburg',  type:'waypoint', seq:'·', name:'Gothenburg, Sweden',            lat:57.7072, lng:11.9668, country:'SE', note:'Major routing node. Follow Route 155 / coastal roads north toward Uddevalla. Avoid E6.', tags:[]},
-  {id:'uddevalla',   type:'waypoint', seq:'·', name:'Uddevalla, Sweden',             lat:58.3480, lng:11.9386, country:'SE', note:'Swedish coast waypoint north of Gothenburg. Continue on Route 162 north toward Strömstad.', tags:[]},
-  {id:'stromstad',   type:'waypoint', seq:'·', name:'Strömstad, Sweden',             lat:58.9379, lng:11.1705, country:'SE', note:'Final Swedish waypoint before Svinesund border crossing. Follow Route 176 southeast to the bridge.', tags:[]},
-  {id:'anda',        type:'waypoint', seq:'·', name:'Anda (after Lote–Anda ferry)',  lat:61.6533, lng:5.9581,  country:'NO', note:'NO arrival after Lote–Anda ferry. Continue north on Fv651 toward Festøya.', tags:[]},
+    // ── INTERMEDIATE ROUTING WAYPOINTS ──────────────────────────,
   {id:'finish', type:'finish', seq:'F', name:'FINISH — Volda', lat:62.17109, lng:6.00881, country:'NO', note:'Race finish. Triumphal Celebration 8 August 2026 at 20:00.', tags:[]},
 ];
 
@@ -631,7 +633,7 @@ const LEGS = [
   {id:'L6', name:'Gates VI–VIII (Sognefjellet loop)',     wps:['g6','g7','g8'],                       dist:'~280km'},
   {id:'L7', name:'Gates XII–XIV (Dalsnibba+Trollstigen)', wps:['g14','g13','andalsnes','g12'],                    dist:'~310km'},
   {id:'L8', name:'Gate XV — Atlantic Ocean Road',         wps:['g15'],                                dist:'~80km'},
-  {id:'L9', name:'Gate XVI → Finish via ferries',         wps:['g16','f_lote','anda','f_fest','festoya_land','f_lauv','finish'], dist:'~120km'},
+  {id:'L9', name:'Gate XVI → Finish via ferries',         wps:['g16','f_lote','anda','f_lauv','finish'], dist:'~120km'},
 ];
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -643,6 +645,7 @@ let allRoutes = [], selWp = null, selRoute = null;
 let selLegs = new Set(LEGS.map(l => l.id));
 const wpMap = Object.fromEntries(WPS.map(w => [w.id, w]));
 let routedTrackPoints = null;
+let savedRouteSegments = [];
 let poiLayerGroup = null;
 let wpMarkerGroup = null;
 
@@ -825,21 +828,23 @@ async function doLogin() {
 
   try {
     if (token) {
-      btnText.innerHTML = '<span class="spinner w"></span> Validating token...';
-      const r = await fetch(`${BASE}/users/current.json?apikey=${encodeURIComponent(API_KEY)}&auth_token=${encodeURIComponent(token)}&version=2`);
-      const data = await r.json();
-
-      if (data.user && (data.user.auth_token || token)) {
-        authToken = data.user.auth_token || token;
-        userId = data.user.id;
-        userEmail = email || data.user.email || 'user';
-        localStorage.setItem(TOKEN_KEY, authToken);
-        localStorage.setItem(EMAIL_KEY, userEmail);
-        localStorage.setItem(APIKEY_KEY, apiKey);
-        bootApp();
-        return;
-      }
-      throw new Error(data.error || data.message || `Token validation failed (HTTP ${r.status}).`);
+      btnText.innerHTML = '<span class="spinner w"></span> Opening with token...';
+      authToken = token;
+      userEmail = email;
+      localStorage.setItem(TOKEN_KEY, authToken);
+      localStorage.setItem(EMAIL_KEY, userEmail);
+      localStorage.setItem(APIKEY_KEY, apiKey);
+      // Resolve userId from token so route loading works
+      try {
+        const ur = await fetch(`${BASE}/users/current.json?apikey=${apiKey}&auth_token=${token}&version=2`);
+        const ud = await ur.json();
+        if (ud.user && ud.user.id) {
+          userId = ud.user.id;
+          localStorage.setItem(TOKEN_KEY, ud.user.auth_token || token);
+        }
+      } catch(e) { /* non-fatal — loadRoutes will try fallback endpoints */ }
+      bootApp();
+      return;
     }
 
     if (!pass) {
@@ -856,7 +861,9 @@ async function doLogin() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     });
-    const data = await r.json();
+
+    let data = {};
+    try { data = await r.json(); } catch (e) {}
 
     if (data.user && data.user.auth_token) {
       authToken = data.user.auth_token;
@@ -869,12 +876,13 @@ async function doLogin() {
       if (tokInput) tokInput.value = authToken;
       bootApp();
     } else {
-      showErr(data.error || data.message || `Login failed (HTTP ${r.status}).`);
+      const msg = data.error || data.message || `Login failed (HTTP ${r.status}). If browser login is flaky, paste a manual auth token instead.`;
+      showErr(msg);
       btn.disabled = false;
       btnText.textContent = 'Sign in to RideWithGPS';
     }
   } catch(e) {
-    showErr(`Network error: ${e.message}`);
+    showErr(`Network error: ${e.message}. If browser login is blocked, use a manual auth token.`);
     btn.disabled = false;
     btnText.textContent = 'Sign in to RideWithGPS';
   }
@@ -917,23 +925,19 @@ async function init() {
     if (emailInput) emailInput.value = em;
   }
   if (tok) {
-    const tokenInput = document.getElementById('loginToken');
-    if (tokenInput) tokenInput.value = tok;
-  }
-  if (tok) {
     try {
       const r = await fetch(`${BASE}/users/current.json?apikey=${API_KEY}&auth_token=${tok}&version=2`);
       const d = await r.json();
       if (d.user && d.user.auth_token) {
-        authToken = d.user.auth_token;
-        userId    = d.user.id;
-        userEmail = em || d.user.email || 'user';
-        if (storedApiKey) API_KEY = storedApiKey;
+        authToken  = d.user.auth_token;
+        userId     = d.user.id;
+        userEmail  = em || d.user.email || 'user';
         localStorage.setItem(TOKEN_KEY, authToken);
         bootApp();
         return;
       }
     } catch(e) {}
+    // Token invalid — clear and show login
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(EMAIL_KEY);
   }
@@ -972,8 +976,7 @@ async function loadRoutes() {
   // Strategy: keep incrementing offset until we get back fewer results than
   // we asked for — that's the end-of-list signal, no pagination metadata needed.
   const candidates = [
-    `${BASE}/users/${userId}/routes.json`,
-    `${BASE}/api/v1/users/${userId}/routes.json`,
+    ...(userId ? [`${BASE}/users/${userId}/routes.json`, `${BASE}/api/v1/users/${userId}/routes.json`] : []),
     `${BASE}/api/v1/routes.json`,
   ];
 
@@ -1003,6 +1006,7 @@ async function loadRoutes() {
 
       // Endpoint worked
       allRoutes = collected;
+      if (!userId && collected.length && collected[0].user_id) userId = collected[0].user_id;
       renderRoutes(allRoutes);
       showToast(`Loaded ${allRoutes.length} route${allRoutes.length !== 1 ? 's' : ''} ✓`, 'success');
       return;
@@ -1016,7 +1020,7 @@ async function loadRoutes() {
   el.innerHTML = `
     <div class="empty-state">
       <div class="icon">⚠️</div>
-      <p style="font-weight:600;margin-bottom:8px">Could not load routes</p>
+      <p style="font-weight:600;margin-bottom:8px">Could not load routes</p><p style="font-size:12px;color:var(--muted);margin-bottom:10px">If you opened with a manual token, this usually means the token is stale/invalid or RWGPS blocked browser access from this file.</p>
       <div style="font-size:11px;font-family:'DM Mono',monospace;line-height:1.8;text-align:left;background:#f5f0e8;padding:10px 12px;border-radius:4px;margin-bottom:12px">
         ${errors.map(e => '✗ ' + e).join('<br>')}
         <br>uid: ${userId} · token: ${authToken ? authToken.slice(0,8)+'...' : 'missing'}
@@ -1588,6 +1592,7 @@ async function previewRoute() {
 
   document.getElementById('routingOverlay').classList.add('active');
   routeLayerGroup && routeLayerGroup.clearLayers();
+  savedRouteSegments = [];
   document.getElementById('compliancePanel').style.display = 'none';
   document.getElementById('mapAreaWrap').className = 'map-area full';
   setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
@@ -1633,6 +1638,14 @@ async function previewRoute() {
   await sleep(400);
   document.getElementById('routingOverlay').classList.remove('active');
   routedTrackPoints = allTP;
+  savedRouteSegments = [];
+  routeLayerGroup.eachLayer(l => {
+    if (l.getLatLngs) savedRouteSegments.push({
+      latlngs: l.getLatLngs(),
+      options: { color:l.options.color, weight:l.options.weight,
+                 opacity:l.options.opacity, dashArray:l.options.dashArray }
+    });
+  });
   placeWaypointMarkers();
 
   const km = (totalDist/1000).toFixed(0);
@@ -2052,7 +2065,30 @@ function toggleOfficialMap() {
 
 
 // ── CAMPGROUNDS, WATER & TOILETS (Overpass API) ───────────────
-const OVERPASS = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+];
+
+async function overpassFetch(query) {
+  let lastErr;
+  for (const url of OVERPASS_ENDPOINTS) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(query)
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    } catch(e) {
+      lastErr = e;
+      console.warn('Overpass endpoint failed:', url, e.message);
+    }
+  }
+  throw lastErr;
+}
 let poiVisible = false;
 let poiCache = {};
 let poiAbortController = null;
@@ -2147,15 +2183,7 @@ async function loadPOI(forceRefresh = false) {
     );
     out center body;`;
 
-    const r = await fetch(OVERPASS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'data=' + encodeURIComponent(q),
-      signal: poiAbortController.signal
-    });
-
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const d = await r.json();
+    const d = await overpassFetch(q);
     poiCache[bb] = d.elements || [];
     renderPOI(poiCache[bb], requestId);
   } catch(e) {
@@ -2247,7 +2275,16 @@ function refreshPOI() {
 
 function setupPOIMapListener() {
   if (!leafletMap) return;
-  // Manual refresh only — no automatic reload on pan/zoom
+  leafletMap.on('zoomend', () => {
+    if (!savedRouteSegments.length || !routeLayerGroup) return;
+    const layers = [];
+    routeLayerGroup.eachLayer(l => layers.push(l));
+    if (layers.length === 0) {
+      savedRouteSegments.forEach(seg =>
+        L.polyline(seg.latlngs, seg.options).addTo(routeLayerGroup)
+      );
+    }
+  });
 }
 
 // ── SERVICE WORKER (PWA offline support) ─────────────────────
