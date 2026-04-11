@@ -161,6 +161,18 @@
   #embedFrame { width: 100%; height: 100%; border: none; display: none; }
 
   #officialMapFrame { position:absolute; inset:0; width:100%; height:100%; border:none; display:none; z-index:450; }
+
+  /* POI Layer */
+  .poi-btn { font-family:'DM Mono',monospace; font-size:10px; padding:3px 9px; border-radius:3px; cursor:pointer; transition:all .15s; flex-shrink:0; border:1px solid #555; color:#bbb; background:none; white-space:nowrap; margin-left:4px; }
+  .poi-btn:hover { border-color:#4caf50; color:#4caf50; }
+  .poi-btn.active { background:#2a7a3b; border-color:#2a7a3b; color:white; }
+  .poi-btn.loading { background:#333; border-color:#555; color:#888; cursor:wait; }
+  .poi-marker-camp  { background:#2a7a3b; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-marker-water { background:#1a5c8a; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-marker-toilet{ background:#b8860b; border:2px solid white; border-radius:50%; width:10px!important; height:10px!important; margin:-5px 0 0 -5px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-popup h4 { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; margin-bottom:3px; }
+  .poi-popup .type { font-size:10px; font-family:'DM Mono',monospace; opacity:0.7; margin-bottom:4px; }
+  .poi-popup a { font-size:11px; color:var(--accent2); }
   #kmlToggleBtn {
     position: absolute; top: 10px; right: 10px; z-index: 470;
     font-family: 'DM Mono', monospace; font-size: 11px;
@@ -172,6 +184,18 @@
   }
   #kmlToggleBtn:hover { background: rgba(232,133,10,0.9); }
   #kmlToggleBtn.active { background: rgba(232,133,10,0.95); }
+  #poiBtn {
+    position: absolute; top: 48px; right: 10px; z-index: 470;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 5px 12px; border-radius: 4px; border: 1px solid #555;
+    background: rgba(15,15,15,0.78); color: #bbb;
+    cursor: pointer; backdrop-filter: blur(3px);
+    transition: all .15s; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  #poiBtn:hover { border-color: #4caf50; color: #4caf50; }
+  #poiBtn.active { background: rgba(42,122,59,0.9); border-color: #4caf50; color: white; }
+  #poiBtn.loading { background: rgba(15,15,15,0.78); color: #666; cursor: wait; }
 
 
   /* ── COMPLIANCE PANEL ── */
@@ -354,13 +378,15 @@
     <input class="login-input" type="text" id="loginApiKey" placeholder="e.g. a1b2c3d4" autocomplete="off" spellcheck="false">
     <label class="login-label" for="loginEmail">Email</label>
     <input class="login-input" type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
-    <label class="login-label" for="loginPass">Password</label>
+    <label class="login-label" for="loginPass">Password (optional if using auth token)</label>
     <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    <label class="login-label" for="loginToken">Auth token (optional)</label>
+    <input class="login-input" type="text" id="loginToken" placeholder="Paste RideWithGPS auth_token" autocomplete="off" spellcheck="false">
     <button class="login-btn" id="loginBtn" onclick="doLogin()">
       <span id="loginBtnText">Sign in to RideWithGPS</span>
     </button>
     <div class="login-error" id="loginError"></div>
-    <p class="login-privacy">🔒 Credentials sent directly to ridewithgps.com — API key, email &amp; auth_token saved to localStorage. Password never stored.</p>
+    <p class="login-privacy">🔒 Use either password login or paste a valid RideWithGPS auth_token. API key, email &amp; auth_token are saved to localStorage. Password is never stored.</p>
   </div>
 </div>
 
@@ -438,6 +464,8 @@
           </div>
           <div id="map" style="width:100%;height:100%"></div>
           <button id="kmlToggleBtn" onclick="toggleOfficialMap()">🗺 Official Map</button>
+          <button id="poiBtn" onclick="togglePOI()">⛺ Camps · 💧 Water · 🚽 Toilets</button>
+          <button id="poiRefreshBtn" onclick="refreshPOI()" style="position: absolute; top: 86px; right: 10px; z-index: 470; font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 12px; border-radius: 4px; border: 1px solid #555; background: rgba(15,15,15,0.78); color: #bbb; cursor: pointer; backdrop-filter: blur(3px); transition: all .15s; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.35); display:none;">↻ Refresh POIs</button>
           <iframe id="officialMapFrame" src="" allowfullscreen></iframe>
           <div id="routingOverlay">
             <div class="routing-title">Computing Road Route</div>
@@ -615,6 +643,7 @@ let allRoutes = [], selWp = null, selRoute = null;
 let selLegs = new Set(LEGS.map(l => l.id));
 const wpMap = Object.fromEntries(WPS.map(w => [w.id, w]));
 let routedTrackPoints = null;
+let poiLayerGroup = null;
 let wpMarkerGroup = null;
 
 // ── HAVERSINE DISTANCE (metres) ───────────────────────────────
@@ -782,18 +811,45 @@ async function doLogin() {
   const apiKey = document.getElementById('loginApiKey').value.trim();
   const email  = document.getElementById('loginEmail').value.trim();
   const pass   = document.getElementById('loginPass').value;
+  const token  = document.getElementById('loginToken').value.trim();
   const btn    = document.getElementById('loginBtn');
-  if (!apiKey) { showErr('Please enter your RideWithGPS API key.'); return; }
-  API_KEY = apiKey;
+  const btnText = document.getElementById('loginBtnText');
   const errEl = document.getElementById('loginError');
 
-  if (!email || !pass) { showErr('Please enter your email and password.'); return; }
+  if (!apiKey) { showErr('Please enter your RideWithGPS API key.'); return; }
+  if (!email) { showErr('Please enter your RideWithGPS email.'); return; }
 
+  API_KEY = apiKey;
   btn.disabled = true;
-  document.getElementById('loginBtnText').innerHTML = '<span class="spinner w"></span> Signing in...';
   errEl.style.display = 'none';
 
   try {
+    if (token) {
+      btnText.innerHTML = '<span class="spinner w"></span> Validating token...';
+      const r = await fetch(`${BASE}/users/current.json?apikey=${encodeURIComponent(API_KEY)}&auth_token=${encodeURIComponent(token)}&version=2`);
+      const data = await r.json();
+
+      if (data.user && (data.user.auth_token || token)) {
+        authToken = data.user.auth_token || token;
+        userId = data.user.id;
+        userEmail = email || data.user.email || 'user';
+        localStorage.setItem(TOKEN_KEY, authToken);
+        localStorage.setItem(EMAIL_KEY, userEmail);
+        localStorage.setItem(APIKEY_KEY, apiKey);
+        bootApp();
+        return;
+      }
+      throw new Error(data.error || data.message || `Token validation failed (HTTP ${r.status}).`);
+    }
+
+    if (!pass) {
+      showErr('Enter either a password or an auth token.');
+      btn.disabled = false;
+      btnText.textContent = 'Sign in to RideWithGPS';
+      return;
+    }
+
+    btnText.innerHTML = '<span class="spinner w"></span> Signing in...';
     const body = new URLSearchParams({ apikey: API_KEY, version: '2', email, password: pass });
     const r = await fetch(`${BASE}/users/current.json`, {
       method: 'POST',
@@ -807,18 +863,20 @@ async function doLogin() {
       userId    = data.user.id;
       userEmail = email;
       localStorage.setItem(TOKEN_KEY, authToken);
-        localStorage.setItem(EMAIL_KEY, email);
-        localStorage.setItem(APIKEY_KEY, apiKey);
-        bootApp();
+      localStorage.setItem(EMAIL_KEY, email);
+      localStorage.setItem(APIKEY_KEY, apiKey);
+      const tokInput = document.getElementById('loginToken');
+      if (tokInput) tokInput.value = authToken;
+      bootApp();
     } else {
       showErr(data.error || data.message || `Login failed (HTTP ${r.status}).`);
       btn.disabled = false;
-      document.getElementById('loginBtnText').textContent = 'Sign in to RideWithGPS';
+      btnText.textContent = 'Sign in to RideWithGPS';
     }
   } catch(e) {
     showErr(`Network error: ${e.message}`);
     btn.disabled = false;
-    document.getElementById('loginBtnText').textContent = 'Sign in to RideWithGPS';
+    btnText.textContent = 'Sign in to RideWithGPS';
   }
 }
 
@@ -840,6 +898,10 @@ function logout() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginPass').value = '';
+  const tokenInput = document.getElementById('loginToken');
+  if (tokenInput) tokenInput.value = '';
+  const btn = document.getElementById('loginBtn');
+  if (btn) btn.disabled = false;
   document.getElementById('loginBtnText').textContent = 'Sign in to RideWithGPS';
   document.getElementById('loginError').style.display = 'none';
 }
@@ -850,6 +912,14 @@ async function init() {
   const em         = localStorage.getItem(EMAIL_KEY);
   const storedApiKey = localStorage.getItem(APIKEY_KEY);
   if (storedApiKey) { API_KEY = storedApiKey; document.getElementById('loginApiKey').value = storedApiKey; }
+  if (em) {
+    const emailInput = document.getElementById('loginEmail');
+    if (emailInput) emailInput.value = em;
+  }
+  if (tok) {
+    const tokenInput = document.getElementById('loginToken');
+    if (tokenInput) tokenInput.value = tok;
+  }
   if (tok) {
     try {
       const r = await fetch(`${BASE}/users/current.json?apikey=${API_KEY}&auth_token=${tok}&version=2`);
@@ -1596,9 +1666,11 @@ function initMap() {
   recommendedLayerGroup = L.layerGroup().addTo(leafletMap);
   wpMarkerGroup         = L.layerGroup().addTo(leafletMap);
   wpPulseGroup          = L.layerGroup().addTo(leafletMap);
+  poiLayerGroup         = L.layerGroup().addTo(leafletMap);
   leafletMap.fitBounds([[51.5, 4.5], [63.5, 12.5]]);
   drawRecommendedRoute();
   placeWaypointMarkers();
+  setupPOIMapListener();
 }
 
 function drawRecommendedRoute(activeLegId) {
@@ -1976,6 +2048,206 @@ function toggleOfficialMap() {
     // Invalidate Leaflet size since it was hidden under the iframe
     if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 50);
   }
+}
+
+
+// ── CAMPGROUNDS, WATER & TOILETS (Overpass API) ───────────────
+const OVERPASS = 'https://overpass-api.de/api/interpreter';
+let poiVisible = false;
+let poiCache = {};
+let poiAbortController = null;
+let poiRequestSeq = 0;
+
+function poiIcon(type) {
+  const cls = type === 'camp' ? 'poi-marker-camp'
+            : type === 'water' ? 'poi-marker-water'
+            : 'poi-marker-toilet';
+  return L.divIcon({ className: cls, iconSize: [12,12] });
+}
+
+function getPOILatLon(el) {
+  if (typeof el.lat === 'number' && typeof el.lon === 'number') return [el.lat, el.lon];
+  if (el.center && typeof el.center.lat === 'number' && typeof el.center.lon === 'number') return [el.center.lat, el.center.lon];
+  return null;
+}
+
+function resetPOIButtons() {
+  const btn = document.getElementById('poiBtn');
+  const refreshBtn = document.getElementById('poiRefreshBtn');
+  if (btn) {
+    btn.textContent = '⛺ Camps · 💧 Water · 🚽 Toilets';
+    btn.classList.remove('loading');
+    if (poiVisible) btn.classList.add('active');
+    else btn.classList.remove('active');
+  }
+  if (refreshBtn) {
+    refreshBtn.style.display = poiVisible ? 'block' : 'none';
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Refresh POIs';
+  }
+}
+
+function currentPOIBBox() {
+  const b = leafletMap.getBounds().pad(0.05);
+  return `${b.getSouth().toFixed(3)},${b.getWest().toFixed(3)},${b.getNorth().toFixed(3)},${b.getEast().toFixed(3)}`;
+}
+
+async function loadPOI(forceRefresh = false) {
+  if (!leafletMap || !poiLayerGroup) return;
+
+  const btn = document.getElementById('poiBtn');
+  const refreshBtn = document.getElementById('poiRefreshBtn');
+  const bb = currentPOIBBox();
+  const requestId = ++poiRequestSeq;
+
+  if (btn) {
+    btn.textContent = '⏳ Loading POIs...';
+    btn.classList.add('loading');
+    btn.classList.add('active');
+  }
+  if (refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '⏳ Refreshing...';
+    refreshBtn.style.display = 'block';
+  }
+
+  if (!forceRefresh && poiCache[bb]) {
+    renderPOI(poiCache[bb], requestId);
+    return;
+  }
+
+  if (poiAbortController) {
+    try { poiAbortController.abort(); } catch (e) {}
+  }
+  poiAbortController = new AbortController();
+
+  try {
+    const q = `[out:json][timeout:20];
+    (
+      node["tourism"="camp_site"](${bb});
+      way["tourism"="camp_site"](${bb});
+      relation["tourism"="camp_site"](${bb});
+      node["tourism"="caravan_site"](${bb});
+      way["tourism"="caravan_site"](${bb});
+      relation["tourism"="caravan_site"](${bb});
+
+      node["amenity"="drinking_water"](${bb});
+      way["amenity"="drinking_water"](${bb});
+      relation["amenity"="drinking_water"](${bb});
+      node["amenity"="water_point"](${bb});
+      way["amenity"="water_point"](${bb});
+      relation["amenity"="water_point"](${bb});
+
+      node["amenity"="toilets"](${bb});
+      way["amenity"="toilets"](${bb});
+      relation["amenity"="toilets"](${bb});
+      node["amenity"="shower"](${bb});
+      way["amenity"="shower"](${bb});
+      relation["amenity"="shower"](${bb});
+    );
+    out center body;`;
+
+    const r = await fetch(OVERPASS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'data=' + encodeURIComponent(q),
+      signal: poiAbortController.signal
+    });
+
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    poiCache[bb] = d.elements || [];
+    renderPOI(poiCache[bb], requestId);
+  } catch(e) {
+    if (e.name === 'AbortError') return;
+    resetPOIButtons();
+    showToast('Could not load POIs: ' + e.message, 'error');
+  }
+}
+
+function renderPOI(elements, requestId) {
+  if (!poiVisible) {
+    resetPOIButtons();
+    return;
+  }
+  if (requestId && requestId !== poiRequestSeq) return;
+  if (!poiLayerGroup) return;
+
+  poiLayerGroup.clearLayers();
+  let c = { camp:0, water:0, toilet:0 };
+
+  for (const el of elements) {
+    const ll = getPOILatLon(el);
+    if (!ll) continue;
+
+    const [lat, lon] = ll;
+    const tags = el.tags || {};
+    let type = 'toilet';
+
+    if (tags.tourism === 'camp_site' || tags.tourism === 'caravan_site') type = 'camp';
+    else if (tags.amenity === 'drinking_water' || tags.amenity === 'water_point') type = 'water';
+
+    c[type]++;
+
+    const emoji = type === 'camp' ? '⛺' : type === 'water' ? '💧' : '🚽';
+    const label = type === 'camp' ? 'Campground' : type === 'water' ? 'Drinking Water' : 'Toilets';
+    const name = tags.name || label;
+    const fee = tags.fee === 'yes' ? ' · fee' : tags.fee === 'no' ? ' · free' : '';
+    const access = tags.access && tags.access !== 'yes' ? ` · access: ${tags.access}` : '';
+
+    L.marker([lat, lon], { icon: poiIcon(type) })
+      .bindPopup(`<div class="poi-popup">
+        <h4>${emoji} ${name}</h4>
+        <div class="type">${label}${fee}${access}</div>
+        <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank">Google Maps ↗</a>
+      </div>`)
+      .addTo(poiLayerGroup);
+  }
+
+  const btn = document.getElementById('poiBtn');
+  const refreshBtn = document.getElementById('poiRefreshBtn');
+  if (btn) {
+    btn.textContent = `⛺ ${c.camp} · 💧 ${c.water} · 🚽 ${c.toilet}`;
+    btn.classList.remove('loading');
+    btn.classList.add('active');
+  }
+  if (refreshBtn) {
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Refresh POIs';
+    refreshBtn.style.display = 'block';
+  }
+  showToast(`${c.camp} camps · ${c.water} water · ${c.toilet} toilets`, 'success');
+}
+
+function togglePOI() {
+  if (!leafletMap || !poiLayerGroup) {
+    showToast('Map not ready yet', 'error');
+    return;
+  }
+
+  poiVisible = !poiVisible;
+  if (poiVisible) {
+    loadPOI(false);
+  } else {
+    if (poiAbortController) {
+      try { poiAbortController.abort(); } catch (e) {}
+    }
+    poiLayerGroup.clearLayers();
+    resetPOIButtons();
+  }
+}
+
+function refreshPOI() {
+  if (!poiVisible) {
+    showToast('Turn POIs on first', 'info');
+    return;
+  }
+  loadPOI(true);
+}
+
+function setupPOIMapListener() {
+  if (!leafletMap) return;
+  // Manual refresh only — no automatic reload on pan/zoom
 }
 
 // ── SERVICE WORKER (PWA offline support) ─────────────────────
