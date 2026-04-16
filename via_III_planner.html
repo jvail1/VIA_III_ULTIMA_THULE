@@ -1979,16 +1979,16 @@ function selectWp(i) {
   }).join('');
   document.getElementById('detailBar').innerHTML = `<h2>${wp.name}</h2>${badges}`;
 
-  // Show photo if available
+  // Show photo if available — only reveal bar after image loads to avoid black flash
   const photoBar = document.getElementById('gatePhotoBar');
   const photoImg = document.getElementById('gatePhotoImg');
+  photoBar.style.display = 'none';
   if (wp.photo) {
+    photoImg.onload  = () => { photoBar.style.display = 'block'; };
+    photoImg.onerror = () => { photoBar.style.display = 'none'; };
     photoImg.src = wp.photo;
     photoImg.alt = wp.name;
     document.getElementById('gatePhotoCredit').textContent = wp.name;
-    photoBar.style.display = 'block';
-  } else {
-    photoBar.style.display = 'none';
   }
 
   // Show weather for gates, start, and finish
