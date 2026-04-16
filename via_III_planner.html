@@ -382,6 +382,39 @@
   .violation-popup h4 { font-family:"Barlow Condensed",sans-serif; font-size:13px; font-weight:700; color:var(--accent); margin-bottom:4px; }
   .violation-popup p { font-size:11px; line-height:1.5; color:#444; }
   .violation-popup a { font-size:11px; color:var(--accent2); }
+
+  /* ── USER PINS ── */
+  .leaflet-user-pin-icon { background:#7c3aed; border:2px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); width:16px!important; height:16px!important; margin:-14px 0 0 -8px!important; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  #addPinBtn {
+    position: absolute; top: 124px; right: 10px; z-index: 470;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 5px 12px; border-radius: 4px; border: 1px solid #555;
+    background: rgba(15,15,15,0.78); color: #bbb;
+    cursor: pointer; backdrop-filter: blur(3px);
+    transition: all .15s; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  #addPinBtn:hover { border-color: #9b6ef5; color: #c4a8ff; }
+  #addPinBtn.active { background: rgba(124,58,237,0.9); border-color: #9b6ef5; color: white; }
+  .map-area.pin-mode { cursor: crosshair !important; }
+  .map-area.pin-mode * { cursor: crosshair !important; }
+  .pin-popup-form { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+  .pin-popup-form input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px; font-family: 'Barlow', sans-serif; width: 100%; }
+  .pin-popup-form textarea { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; font-family: 'Barlow', sans-serif; width: 100%; resize: vertical; min-height: 48px; }
+  .pin-popup-form .pin-save-btn { padding: 5px 12px; background: #7c3aed; color: white; border: none; border-radius: 3px; font-size: 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+  .pin-popup-form .pin-save-btn:hover { background: #6d28d9; }
+  /* Pins sidebar list */
+  .pin-list-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #f0ebe3; }
+  .pin-list-icon { width: 22px; height: 22px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 10px; color: white; margin-top: 1px; }
+  .pin-list-info { flex: 1; min-width: 0; }
+  .pin-list-name { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; line-height: 1.2; }
+  .pin-list-meta { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .pin-list-note { font-size: 11px; color: #555; margin-top: 2px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pin-del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 3px; flex-shrink: 0; transition: color 0.15s; }
+  .pin-del-btn:hover { color: var(--accent); }
+  .pin-empty { text-align: center; padding: 32px 20px; color: var(--muted); }
+  .pin-empty .icon { font-size: 32px; opacity: 0.4; margin-bottom: 8px; }
+  .pin-empty p { font-size: 12px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -431,6 +464,7 @@
         <button class="tab active" id="tab-btn-routes" onclick="switchTab('routes')">🚴 My Routes</button>
         <button class="tab" id="tab-btn-gpx" onclick="switchTab('gpx')" style="display:none">📂 Upload GPX</button>
         <button class="tab" onclick="switchTab('waypoints')">📍 Gates</button>
+        <button class="tab" id="tab-btn-pins" onclick="switchTab('pins')">📌 Pins</button>
         <button class="tab" onclick="switchTab('create')">✚ Create</button>
       </div>
 
@@ -459,6 +493,15 @@
       <!-- WAYPOINTS TAB -->
       <div class="tab-panel" id="tab-waypoints">
         <div class="waypoints-list" id="waypointsList"></div>
+      </div>
+
+      <!-- PINS TAB -->
+      <div class="tab-panel" id="tab-pins">
+        <div style="padding:10px 14px 6px;border-bottom:1px solid var(--border);flex-shrink:0">
+          <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:8px">Click <strong>📌 Add Pin</strong> on the map to drop a personal waypoint. Pins are saved to your browser and persist between sessions.</p>
+          <button onclick="clearAllPins()" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);border-radius:3px;background:white;color:var(--muted);cursor:pointer;transition:all 0.15s" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Clear all pins</button>
+        </div>
+        <div class="waypoints-list" id="pinsList"></div>
       </div>
 
       <!-- CREATE TAB -->
@@ -508,6 +551,7 @@
           <button id="kmlToggleBtn" onclick="toggleOfficialMap()">🗺 Official Map</button>
           <button id="poiBtn" onclick="togglePOI()">⛺ Camps · 💧 Water · 🚽 Toilets</button>
           <button id="poiRefreshBtn" onclick="refreshPOI()" style="position: absolute; top: 86px; right: 10px; z-index: 470; font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 12px; border-radius: 4px; border: 1px solid #555; background: rgba(15,15,15,0.78); color: #bbb; cursor: pointer; backdrop-filter: blur(3px); transition: all .15s; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.35); display:none;">↻ Refresh POIs</button>
+          <button id="addPinBtn" onclick="togglePinMode()">📌 Add Pin</button>
           <div id="poiLoadingBadge" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:470;background:rgba(15,15,15,0.82);color:#7db8e8;font-family:'DM Mono',monospace;font-size:11px;padding:5px 14px;border-radius:20px;backdrop-filter:blur(4px);white-space:nowrap;pointer-events:none">
             <span class="spinner" style="width:9px;height:9px;border-width:1.5px;border-color:rgba(255,255,255,0.2);border-top-color:#7db8e8;margin-right:6px;vertical-align:middle"></span>Loading POIs...
           </div>
@@ -1150,6 +1194,7 @@ async function selectRoute(id, name) {
 
     // Render route on Leaflet map with violation + gate overlays
     renderRouteOnMap(name, pts, result);
+    updatePinRouteDistances(pts);
 
     // Update sidebar badge
     const badge = document.getElementById(`badge-${id}`);
@@ -1567,6 +1612,138 @@ let leafletMap = null;
 let routeLayerGroup = null;
 let wpPulseGroup = null;
 
+// ── USER PINS ─────────────────────────────────────────────────
+const USER_PINS_KEY = 'via.userPins.v1';
+let userPins = [];
+let userPinLayerGroup = null;
+let pinModeActive = false;
+let _pendingPinPopup = null;
+
+function loadUserPins() {
+  try { userPins = JSON.parse(localStorage.getItem(USER_PINS_KEY) || '[]'); } catch(e) { userPins = []; }
+}
+function saveUserPins() {
+  localStorage.setItem(USER_PINS_KEY, JSON.stringify(userPins));
+}
+
+function togglePinMode() {
+  pinModeActive = !pinModeActive;
+  const btn = document.getElementById('addPinBtn');
+  const mapWrap = document.getElementById('mapAreaWrap');
+  if (pinModeActive) {
+    btn.classList.add('active');
+    btn.textContent = '✕ Cancel Pin';
+    mapWrap.classList.add('pin-mode');
+    showToast('Click anywhere on the map to drop a pin', 'info');
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '📌 Add Pin';
+    mapWrap.classList.remove('pin-mode');
+    if (_pendingPinPopup) { leafletMap.closePopup(_pendingPinPopup); _pendingPinPopup = null; }
+  }
+}
+
+function renderUserPins() {
+  if (!userPinLayerGroup) return;
+  userPinLayerGroup.clearLayers();
+
+  const icon = L.divIcon({ className: 'leaflet-user-pin-icon', iconSize: [16, 16] });
+
+  for (const pin of userPins) {
+    const marker = L.marker([pin.lat, pin.lng], { icon, title: pin.name });
+    marker.bindPopup(`
+      <div style="min-width:160px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:3px">📌 ${pin.name}</div>
+        ${pin.note ? `<div style="font-size:11px;color:#444;line-height:1.5;margin-bottom:5px">${pin.note}</div>` : ''}
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:#888;margin-bottom:6px">${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}</div>
+        <button onclick="removeUserPin('${pin.id}')" style="font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:3px 8px;border:1px solid #c8410a;border-radius:3px;background:white;color:#c8410a;cursor:pointer">Delete pin</button>
+      </div>`);
+    marker.addTo(userPinLayerGroup);
+  }
+
+  renderPinsList();
+}
+
+function renderPinsList() {
+  const el = document.getElementById('pinsList');
+  if (!el) return;
+
+  if (userPins.length === 0) {
+    el.innerHTML = `<div class="pin-empty"><div class="icon">📌</div><p>No pins yet.<br>Click <strong>📌 Add Pin</strong> on the map<br>to drop your first waypoint.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = userPins.map(pin => {
+    const distStr = pin.routeDistM != null
+      ? `<span style="color:#2a7a3b">${pin.routeDistM < 1000 ? Math.round(pin.routeDistM)+'m' : (pin.routeDistM/1000).toFixed(1)+'km'} from route</span> · `
+      : '';
+    return `
+      <div class="pin-list-item">
+        <div class="pin-list-icon">📌</div>
+        <div class="pin-list-info">
+          <div class="pin-list-name">${pin.name}</div>
+          <div class="pin-list-meta">${distStr}${pin.lat.toFixed(4)}°N ${Math.abs(pin.lng).toFixed(4)}°E</div>
+          ${pin.note ? `<div class="pin-list-note">${pin.note}</div>` : ''}
+        </div>
+        <button class="pin-del-btn" onclick="removeUserPin('${pin.id}')" title="Delete pin">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function addUserPin(lat, lng, name, note) {
+  const pin = {
+    id: 'pin-' + Date.now(),
+    lat, lng,
+    name: name || 'My pin',
+    note: note || '',
+    routeDistM: null,
+  };
+  // If route is loaded, compute distance to route
+  if (window._lastRoutePts && window._lastRoutePts.length) {
+    let minD = Infinity;
+    for (let i = 0; i < window._lastRoutePts.length; i += 3) {
+      const d = haversine(lat, lng, window._lastRoutePts[i].lat, window._lastRoutePts[i].lng);
+      if (d < minD) minD = d;
+    }
+    pin.routeDistM = Math.round(minD);
+  }
+  userPins.push(pin);
+  saveUserPins();
+  renderUserPins();
+  showToast(`Pin "${pin.name}" saved`, 'success');
+}
+
+function removeUserPin(id) {
+  userPins = userPins.filter(p => p.id !== id);
+  saveUserPins();
+  renderUserPins();
+  leafletMap && leafletMap.closePopup();
+}
+
+function clearAllPins() {
+  if (userPins.length === 0) return;
+  if (!confirm(`Delete all ${userPins.length} pin${userPins.length !== 1 ? 's' : ''}?`)) return;
+  userPins = [];
+  saveUserPins();
+  renderUserPins();
+  showToast('All pins cleared', 'info');
+}
+
+function updatePinRouteDistances(pts) {
+  if (!pts || !pts.length) return;
+  window._lastRoutePts = pts;
+  for (const pin of userPins) {
+    let minD = Infinity;
+    for (let i = 0; i < pts.length; i += 3) {
+      const d = haversine(pin.lat, pin.lng, pts[i].lat, pts[i].lng);
+      if (d < minD) minD = d;
+    }
+    pin.routeDistM = Math.round(minD);
+  }
+  saveUserPins();
+  renderPinsList();
+}
+
 function initMap() {
   if (leafletMap) return;
   leafletMap = L.map('map', { zoomControl: true });
@@ -1578,9 +1755,47 @@ function initMap() {
   wpMarkerGroup   = L.layerGroup().addTo(leafletMap);
   wpPulseGroup    = L.layerGroup().addTo(leafletMap);
   poiLayerGroup   = L.layerGroup().addTo(leafletMap);
+  userPinLayerGroup = L.layerGroup().addTo(leafletMap);
   leafletMap.fitBounds([[51.5, 4.5], [63.5, 12.5]]);
   placeWaypointMarkers();
   setupPOIMapListener();
+
+  // Pin drop handler
+  leafletMap.on('click', function(e) {
+    if (!pinModeActive) return;
+    const { lat, lng } = e.latlng;
+
+    // Close any open pending popup
+    if (_pendingPinPopup) leafletMap.closePopup(_pendingPinPopup);
+
+    const uid = 'pf-' + Date.now();
+    const popup = L.popup({ closeButton: true, maxWidth: 260 })
+      .setLatLng([lat, lng])
+      .setContent(`
+        <div class="pin-popup-form">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#7c3aed;margin-bottom:2px">Drop pin here</div>
+          <input id="${uid}-name" class="" placeholder="Pin name" style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:Barlow,sans-serif;width:100%">
+          <textarea id="${uid}-note" placeholder="Note (optional)" style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:11px;font-family:Barlow,sans-serif;width:100%;resize:vertical;min-height:48px;margin-top:4px"></textarea>
+          <button onclick="(function(){
+            var n=document.getElementById('${uid}-name').value.trim()||'My pin';
+            var t=document.getElementById('${uid}-note').value.trim();
+            addUserPin(${lat},${lng},n,t);
+            leafletMap.closePopup();
+            if(pinModeActive)togglePinMode();
+          })()" style="margin-top:4px;padding:5px 12px;background:#7c3aed;color:white;border:none;border-radius:3px;font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;width:100%">Save Pin</button>
+        </div>`)
+      .openOn(leafletMap);
+    _pendingPinPopup = popup;
+
+    // Auto-focus the name input
+    setTimeout(() => {
+      const inp = document.getElementById(uid + '-name');
+      if (inp) inp.focus();
+    }, 100);
+  });
+
+  loadUserPins();
+  renderUserPins();
 }
 
 function renderRouteOnMap(routeName, pts, result) {
@@ -1648,6 +1863,7 @@ function renderRouteOnMap(routeName, pts, result) {
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8410a;margin-right:5px;vertical-align:middle"></span>Violation</div>
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2a7a3b;margin-right:5px;vertical-align:middle"></span>Gate hit</div>
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-right:5px;vertical-align:middle"></span>Gate missed</div>
+      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:5px;vertical-align:middle"></span>My pins</div>
       `;
     return d;
   };
@@ -1966,6 +2182,7 @@ function loadGPXFile(event, routeName) {
 
       renderComplianceReport(cp, routeName + ' (GPX)', fakeRoute, pts, result);
       renderRouteOnMap(routeName, pts, result);
+      updatePinRouteDistances(pts);
 
       const vCount = result.violations.length;
       const gMiss  = result.gatesMissed.length;
