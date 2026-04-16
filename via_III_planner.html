@@ -150,6 +150,18 @@
   .badge.blue  { background: #0d3655; color: #7db8e8; }
   .badge.amber { background: #4a3010; color: #f5c842; }
 
+  /* ── WEATHER BAR ── */
+  #weatherBar { display: none; background: #1a2a3a; border-bottom: 1px solid #243444; padding: 8px 16px; flex-shrink: 0; }
+  .wx-days { display: flex; gap: 8px; }
+  .wx-day { flex: 1; background: rgba(255,255,255,0.06); border-radius: 4px; padding: 7px 10px; min-width: 0; }
+  .wx-date { font-family: 'DM Mono', monospace; font-size: 9px; color: #7a9bb5; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+  .wx-icon { font-size: 18px; margin-bottom: 3px; }
+  .wx-temp { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: #e8f0f8; }
+  .wx-temp span { font-weight: 400; color: #7a9bb5; font-size: 11px; }
+  .wx-wind { font-family: 'DM Mono', monospace; font-size: 9px; color: #9ab5cc; margin-top: 3px; }
+  .wx-precip { font-family: 'DM Mono', monospace; font-size: 9px; color: #7ab5cc; margin-top: 1px; }
+  .wx-loading { font-family: 'DM Mono', monospace; font-size: 10px; color: #7a9bb5; padding: 6px 0; }
+
   /* Map + compliance split layout */
   .right-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .map-area { position: relative; background: #e8e3db; overflow: hidden; }
@@ -347,6 +359,11 @@
   .btn-full.green { background: var(--green); }
   .btn-full.green:hover { background: #1e5c2a; }
   .leg-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .leg-vias { padding: 4px 8px 6px 30px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .via-item { display: flex; align-items: center; gap: 4px; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); background: white; transition: all 0.1s; user-select: none; }
+  .via-item:hover { border-color: var(--accent2); color: var(--ink); }
+  .via-item.on { background: #eef4fb; border-color: var(--accent2); color: var(--accent2); }
+  .via-item .via-check { font-size: 9px; }
   #routingOverlay { position:absolute;inset:0;background:rgba(15,15,15,0.82);z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px; }
   #routingOverlay.active { display:flex; }
   .routing-title { font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--paper); }
@@ -389,6 +406,11 @@
     </button>
     <div class="login-error" id="loginError"></div>
     <p class="login-privacy">🔒 Use either password login or paste a valid RideWithGPS auth_token. API key, email &amp; auth_token are saved to localStorage. Password is never stored.</p>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="enterGuestMode()" style="background:none;border:none;font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;padding:4px">
+        Continue without RideWithGPS →
+      </button>
+    </div>
   </div>
 </div>
 
@@ -405,7 +427,8 @@
     <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="tab-bar">
-        <button class="tab active" onclick="switchTab('routes')">🚴 My Routes</button>
+        <button class="tab active" id="tab-btn-routes" onclick="switchTab('routes')">🚴 My Routes</button>
+        <button class="tab" id="tab-btn-gpx" onclick="switchTab('gpx')" style="display:none">📂 Upload GPX</button>
         <button class="tab" onclick="switchTab('waypoints')">📍 Gates</button>
         <button class="tab" onclick="switchTab('create')">✚ Create</button>
       </div>
@@ -415,6 +438,20 @@
         <div class="routes-panel">
           <input class="search-box" type="text" id="routeSearch" placeholder="Search your routes..." oninput="filterRoutes()">
           <div id="routesList"><div class="loading-row"><span class="spinner"></span>Loading routes...</div></div>
+        </div>
+      </div>
+
+      <!-- GPX UPLOAD TAB (guest mode) -->
+      <div class="tab-panel" id="tab-gpx">
+        <div class="routes-panel" style="padding:16px">
+          <div class="section-label">Upload your GPX route</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px">Export your route from Komoot, Garmin, Wahoo, or any other tool as a GPX file and upload it here for a full compliance check.</p>
+          <label style="display:block;border:2px dashed var(--border);border-radius:6px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.15s;background:white" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:28px;margin-bottom:8px">📂</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--ink)">Choose GPX file</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">.gpx files from any routing tool</div>
+            <input type="file" accept=".gpx" style="display:none" onchange="loadGPXFile(event, 'Uploaded Route')">
+          </label>
         </div>
       </div>
 
@@ -434,7 +471,7 @@
           <div class="section-label" style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">Road Routing</div>
           <button class="btn-full green" id="previewBtn" onclick="previewRoute()">🗺 Preview on Road Network</button>
           <div class="section-label" style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">Export</div>
-          <button class="btn-full" id="createBtn" onclick="createRoute()">✚ Create on RideWithGPS</button>
+          <button class="btn-full" id="createBtn" onclick="createRoute()">✚ Push to RideWithGPS</button>
           <button class="btn-full blue" onclick="downloadGPX()">⬇ Download GPX (Road-Routed)</button>
         </div>
       </div>
@@ -453,6 +490,8 @@
       <div class="detail-bar" id="detailBar">
         <h2 id="detailTitle">Select a route to inspect</h2>
       </div>
+
+      <div id="weatherBar"><div class="wx-loading"><span class="spinner" style="width:10px;height:10px;margin-right:6px;border-width:1.5px"></span>Loading forecast...</div></div>
 
       <div class="right-content" id="rightContent">
         <!-- Map + compliance panel rendered here dynamically -->
@@ -644,6 +683,11 @@ let authToken = null, userId = null, userEmail = null;
 let allRoutes = [], selWp = null, selRoute = null;
 let selLegs = new Set(LEGS.map(l => l.id));
 const wpMap = Object.fromEntries(WPS.map(w => [w.id, w]));
+const GATE_TYPES = new Set(['gate', 'start', 'finish']);
+// All non-gate via waypoints pinned by default
+const pinnedViaWps = new Set(
+  LEGS.flatMap(l => l.wps).filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type))
+);
 let routedTrackPoints = null;
 let savedRouteSegments = [];
 let poiLayerGroup = null;
@@ -944,10 +988,31 @@ async function init() {
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
+let guestMode = false;
+
+function enterGuestMode() {
+  guestMode = true;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('userLabel').textContent = 'Guest';
+  document.getElementById('tab-btn-routes').style.display = 'none';
+  document.getElementById('tab-btn-gpx').style.display = '';
+  document.getElementById('createBtn').disabled = true;
+  document.getElementById('createBtn').title = 'Sign in to RideWithGPS to use this feature';
+  document.getElementById('createBtn').style.opacity = '0.4';
+  initMap();
+  renderWaypoints();
+  renderLegs();
+  switchTab('gpx');
+}
+
 function bootApp() {
+  guestMode = false;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('userLabel').textContent = userEmail || `uid:${userId}`;
+  document.getElementById('tab-btn-routes').style.display = '';
+  document.getElementById('tab-btn-gpx').style.display = 'none';
   initMap();
   renderWaypoints();
   renderLegs();
@@ -1586,7 +1651,11 @@ async function previewRoute() {
   routedTrackPoints = null;
   const seen = new Set(), pts = [];
   LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
-    l.wps.forEach(id => { if (!seen.has(id) && wpMap[id]) { seen.add(id); pts.push(wpMap[id]); } })
+    l.wps.forEach(id => {
+      if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
+        seen.add(id); pts.push(wpMap[id]);
+      }
+    })
   );
   if (pts.length < 2) { showToast('Select at least 2 waypoints','error'); btn.disabled=false; btn.innerHTML='🗺 Preview on Road Network'; return; }
 
@@ -1816,7 +1885,8 @@ function embedRoute(id) {
 
 // ── WAYPOINTS SIDEBAR ─────────────────────────────────────────
 function renderWaypoints() {
-  document.getElementById('waypointsList').innerHTML = WPS.map((wp, i) => `
+  const gateWps = WPS.map((wp, i) => ({wp, i})).filter(({wp}) => GATE_TYPES.has(wp.type));
+  document.getElementById('waypointsList').innerHTML = gateWps.map(({wp, i}) => `
     <div class="waypoint-item ${selWp===i?'selected':''}" onclick="selectWp(${i})">
       <div class="wp-badge ${wp.type}">${wp.seq}</div>
       <div class="wp-info">
@@ -1847,6 +1917,13 @@ function selectWp(i) {
   }).join('');
   document.getElementById('detailBar').innerHTML = `<h2>${wp.name}</h2>${badges}`;
 
+  // Show weather for gates, start, and finish
+  if (['gate', 'start', 'finish'].includes(wp.type)) {
+    showGateWeather(wp.lat, wp.lng);
+  } else {
+    document.getElementById('weatherBar').style.display = 'none';
+  }
+
   initMap();
   // Clear only the pulse marker, never the route polylines
   if (wpPulseGroup) wpPulseGroup.clearLayers();
@@ -1860,15 +1937,93 @@ function selectWp(i) {
     .addTo(wpPulseGroup).openPopup();
 }
 
+// ── GATE WEATHER ──────────────────────────────────────────────
+const wxCache = new Map();
+
+const WX_CODES = {
+  0:'☀️ Clear', 1:'🌤 Mainly clear', 2:'⛅ Partly cloudy', 3:'☁️ Overcast',
+  45:'🌫 Fog', 48:'🌫 Icy fog',
+  51:'🌦 Light drizzle', 53:'🌦 Drizzle', 55:'🌧 Heavy drizzle',
+  61:'🌧 Light rain', 63:'🌧 Rain', 65:'🌧 Heavy rain',
+  71:'🌨 Light snow', 73:'🌨 Snow', 75:'❄️ Heavy snow', 77:'🌨 Snow grains',
+  80:'🌦 Showers', 81:'🌧 Heavy showers', 82:'⛈ Violent showers',
+  85:'🌨 Snow showers', 86:'❄️ Heavy snow showers',
+  95:'⛈ Thunderstorm', 96:'⛈ Thunderstorm+hail', 99:'⛈ Heavy thunderstorm',
+};
+
+const WIND_DIRS = ['N','NE','E','SE','S','SW','W','NW'];
+function windDir(deg) { return WIND_DIRS[Math.round(deg / 45) % 8]; }
+
+async function fetchGateWeather(lat, lng) {
+  const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+  if (wxCache.has(key)) return wxCache.get(key);
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+    `&daily=temperature_2m_max,temperature_2m_min,windspeed_10m_max,winddirection_10m_dominant,precipitation_sum,weathercode` +
+    `&timezone=Europe%2FOslo&forecast_days=3`;
+
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Weather fetch failed');
+  const data = await r.json();
+  wxCache.set(key, data.daily);
+  return data.daily;
+}
+
+function wxDayName(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+async function showGateWeather(lat, lng) {
+  const bar = document.getElementById('weatherBar');
+  bar.style.display = 'block';
+  bar.innerHTML = '<div class="wx-loading"><span class="spinner" style="width:10px;height:10px;margin-right:6px;border-width:1.5px;border-color:rgba(255,255,255,0.2);border-top-color:#7db8e8"></span>Loading forecast...</div>';
+
+  try {
+    const d = await fetchGateWeather(lat, lng);
+    const days = d.time.map((t, i) => `
+      <div class="wx-day">
+        <div class="wx-date">${wxDayName(t)}</div>
+        <div class="wx-icon">${(WX_CODES[d.weathercode[i]] || '🌡').split(' ')[0]}</div>
+        <div class="wx-temp">${Math.round(d.temperature_2m_max[i])}° <span>/ ${Math.round(d.temperature_2m_min[i])}°</span></div>
+        <div class="wx-wind">💨 ${Math.round(d.windspeed_10m_max[i])} km/h ${windDir(d.winddirection_10m_dominant[i])}</div>
+        <div class="wx-precip">🌧 ${d.precipitation_sum[i].toFixed(1)} mm</div>
+      </div>`).join('');
+    bar.innerHTML = `<div class="wx-days">${days}</div>`;
+  } catch(e) {
+    bar.innerHTML = '<div class="wx-loading" style="color:#c87a7a">⚠ Forecast unavailable</div>';
+  }
+}
+
 // ── LEGS ──────────────────────────────────────────────────────
 function renderLegs() {
-  document.getElementById('legSelector').innerHTML = LEGS.map((l,li) => `
+  document.getElementById('legSelector').innerHTML = LEGS.map((l,li) => {
+    const viaIds = l.wps.filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type));
+    const viaHtml = selLegs.has(l.id) && viaIds.length ? `
+      <div class="leg-vias" onclick="event.stopPropagation()">
+        ${viaIds.map(id => {
+          const w = wpMap[id];
+          const on = pinnedViaWps.has(id);
+          const icon = w.type === 'ferry' ? '⛴' : w.type === 'refuge' ? '🏕' : '📍';
+          return `<div class="via-item ${on?'on':''}" onclick="toggleViaWp('${id}')">
+            <span class="via-check">${on?'✓':'○'}</span>${icon} ${w.name.split('—')[0].split(',')[0].trim()}
+          </div>`;
+        }).join('')}
+      </div>` : '';
+    return `
     <div class="leg-row ${selLegs.has(l.id)?'on':''}" onclick="toggleLeg('${l.id}')">
       <div class="leg-check">${selLegs.has(l.id)?'✓':''}</div>
       <div class="leg-color" style="background:${LEG_COLORS[li%LEG_COLORS.length]};${selLegs.has(l.id)?'':'opacity:0.25'}"></div>
       <div class="leg-label">${l.name}</div>
       <div class="leg-dist">${l.dist}</div>
-    </div>`).join('');
+    </div>${viaHtml}`;
+  }).join('');
+}
+
+function toggleViaWp(id) {
+  pinnedViaWps.has(id) ? pinnedViaWps.delete(id) : pinnedViaWps.add(id);
+  routedTrackPoints = null;
+  renderLegs();
 }
 
 function toggleLeg(id) {
@@ -1894,7 +2049,11 @@ async function createRoute() {
   } else {
     const seen = new Set(), wpPts = [];
     LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
-      l.wps.forEach(id => { if (!seen.has(id) && wpMap[id]) { seen.add(id); wpPts.push(wpMap[id]); } })
+      l.wps.forEach(id => {
+        if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
+          seen.add(id); wpPts.push(wpMap[id]);
+        }
+      })
     );
     trackPts = wpPts;
     if (trackPts.length < 2) {
@@ -1946,7 +2105,11 @@ function downloadGPX() {
   const name = document.getElementById('newRouteName').value.trim() || 'VIA Chapter III';
   const seen = new Set(), pts = [];
   LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
-    l.wps.forEach(id => { if (!seen.has(id) && wpMap[id]) { seen.add(id); pts.push(wpMap[id]); } })
+    l.wps.forEach(id => {
+      if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
+        seen.add(id); pts.push(wpMap[id]);
+      }
+    })
   );
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const sym = {ferry:'Anchor', start:'Flag, Green', finish:'Flag, Red', refuge:'Campground', gate:'Waypoint'};
@@ -1974,8 +2137,13 @@ function downloadGPX() {
 
 // ── HELPERS ───────────────────────────────────────────────────
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['routes','waypoints','create'][i]===name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id===`tab-${name}`));
+  document.querySelectorAll('.tab[id^="tab-btn-"]').forEach(t => t.classList.toggle('active', t.id===`tab-btn-${name}`));
+  // Also handle tabs without explicit IDs by their onclick
+  document.querySelectorAll('.tab:not([id])').forEach(t => {
+    const match = (t.getAttribute('onclick')||'').match(/switchTab\('(\w+)'\)/);
+    if (match) t.classList.toggle('active', match[1]===name);
+  });
 }
 function cp(text, msg) { navigator.clipboard.writeText(text).then(() => showToast(msg, 'info')); }
 let toastTimer;
