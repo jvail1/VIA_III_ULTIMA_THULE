@@ -406,9 +406,10 @@
     </button>
     <div class="login-error" id="loginError"></div>
     <p class="login-privacy">🔒 Use either password login or paste a valid RideWithGPS auth_token. API key, email &amp; auth_token are saved to localStorage. Password is never stored.</p>
-    <div style="text-align:center;margin-top:14px">
-      <button onclick="enterGuestMode()" style="background:none;border:none;font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;padding:4px">
-        Continue without RideWithGPS →
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <p style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">Using Komoot, Garmin, Wahoo or another tool?</p>
+      <button onclick="enterGuestMode()" style="width:100%;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:white;color:var(--ink);border:2px solid var(--border);border-radius:4px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink)'">
+        📂 Upload GPX — No login needed
       </button>
     </div>
   </div>
@@ -1252,19 +1253,6 @@ async function selectRoute(id, name) {
     // Render route on Leaflet map with violation + gate overlays
     renderRouteOnMap(name, pts, result);
 
-    // Highlight the recommended leg that best matches this route's bounding box
-    if (pts.length > 0) {
-      const midPt = pts[Math.floor(pts.length/2)];
-      let bestLeg = null, bestDist = Infinity;
-      for (const leg of RECOMMENDED_ROUTE) {
-        const midCoord = leg.coords[Math.floor(leg.coords.length/2)];
-        const d = haversine(midPt.lat, midPt.lng, midCoord[0], midCoord[1]);
-        if (d < bestDist) { bestDist = d; bestLeg = leg.leg; }
-      }
-      leafletMap._activeleg = bestLeg;
-      drawRecommendedRoute(bestLeg);
-    }
-
     // Update sidebar badge
     const badge = document.getElementById(`badge-${id}`);
     if (badge) {
@@ -1502,10 +1490,7 @@ function renderComplianceReport(container, name, route, pts, result) {
 // ── EMBED ROUTE ───────────────────────────────────────────────
 // ── LEAFLET MAP ───────────────────────────────────────────────
 
-// ── RECOMMENDED ROUTE OVERLAY ─────────────────────────────────
-// Approximate polyline for each leg of the recommended efficient route.
-// Used for visual reference overlay on the Leaflet map.
-const RECOMMENDED_ROUTE = [
+const RECOMMENDED_ROUTE = [ // kept for reference, no longer rendered
   { leg:'L1', label:'Start → Brocken', color:'#e8850a', coords:[
     [52.004, 5.461],   // Amerongen
     [51.985, 5.899],   // Arnhem
@@ -1730,9 +1715,6 @@ async function previewRoute() {
   showToast(`Routed ${segments} segments — ${km}km on cycling roads!`, 'success');
 }
 
-let recommendedLayerGroup = null;
-let recommendedVisible = true;
-
 let leafletMap = null;
 let routeLayerGroup = null;
 let wpPulseGroup = null;
@@ -1744,44 +1726,13 @@ function initMap() {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
     subdomains: 'abcd', maxZoom: 19,
   }).addTo(leafletMap);
-  routeLayerGroup       = L.layerGroup().addTo(leafletMap);
-  recommendedLayerGroup = L.layerGroup().addTo(leafletMap);
-  wpMarkerGroup         = L.layerGroup().addTo(leafletMap);
-  wpPulseGroup          = L.layerGroup().addTo(leafletMap);
-  poiLayerGroup         = L.layerGroup().addTo(leafletMap);
+  routeLayerGroup = L.layerGroup().addTo(leafletMap);
+  wpMarkerGroup   = L.layerGroup().addTo(leafletMap);
+  wpPulseGroup    = L.layerGroup().addTo(leafletMap);
+  poiLayerGroup   = L.layerGroup().addTo(leafletMap);
   leafletMap.fitBounds([[51.5, 4.5], [63.5, 12.5]]);
-  drawRecommendedRoute();
   placeWaypointMarkers();
   setupPOIMapListener();
-}
-
-function drawRecommendedRoute(activeLegId) {
-  if (!recommendedLayerGroup) return;
-  recommendedLayerGroup.clearLayers();
-  if (!recommendedVisible) return;
-
-  for (const leg of RECOMMENDED_ROUTE) {
-    const isActive = !activeLegId || leg.leg === activeLegId;
-    L.polyline(leg.coords, {
-      color:     '#e8850a',
-      weight:    isActive ? 4 : 2,
-      opacity:   isActive ? 0.55 : 0.20,
-      dashArray: '8, 10',
-      lineCap:   'round',
-      lineJoin:  'round',
-    }).bindTooltip(`Recommended: ${leg.label}`, { sticky: true })
-      .addTo(recommendedLayerGroup);
-  }
-}
-
-function toggleRecommended() {
-  recommendedVisible = !recommendedVisible;
-  const btn = document.getElementById('toggleRecBtn');
-  if (btn) {
-    btn.style.background  = recommendedVisible ? '#e8850a' : '#555';
-    btn.textContent = recommendedVisible ? '◈ Rec. route ON' : '◈ Rec. route OFF';
-  }
-  drawRecommendedRoute(leafletMap._activeleg || null);
 }
 
 function renderRouteOnMap(routeName, pts, result) {
@@ -1862,14 +1813,10 @@ function renderRouteOnMap(routeName, pts, result) {
     d.style.cssText = 'background:white;padding:8px 10px;border-radius:4px;font-size:11px;font-family:Barlow,sans-serif;line-height:1.9;box-shadow:0 1px 5px rgba(0,0,0,0.2)';
     d.innerHTML = `
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1a5c8a;margin-right:5px;vertical-align:middle"></span>Your route</div>
-      <div><span style="display:inline-block;width:28px;height:3px;background:#e8850a;border-top:2px dashed #e8850a;margin-right:5px;vertical-align:middle;display:inline-block"></span>Recommended</div>
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8410a;margin-right:5px;vertical-align:middle"></span>Violation</div>
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2a7a3b;margin-right:5px;vertical-align:middle"></span>Gate hit</div>
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-right:5px;vertical-align:middle"></span>Gate missed</div>
-      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#b8860b;margin-right:5px;vertical-align:middle"></span>Corridor advisory</div>
-      <div style="margin-top:6px;border-top:1px solid #eee;padding-top:6px">
-        <button id="toggleRecBtn" onclick="toggleRecommended()" style="width:100%;padding:4px 6px;font-size:11px;font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border:none;border-radius:3px;cursor:pointer;background:#e8850a;color:white">◈ Rec. route ON</button>
-      </div>`;
+      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#b8860b;margin-right:5px;vertical-align:middle"></span>Corridor advisory</div>`;
     return d;
   };
   // Only add legend once
