@@ -535,6 +535,10 @@
         <h2 id="detailTitle">Select a route to inspect</h2>
       </div>
 
+      <div id="gatePhotoBar" style="display:none;height:140px;flex-shrink:0;overflow:hidden;position:relative;background:#111">
+        <img id="gatePhotoImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;opacity:0.85">
+        <div id="gatePhotoCredit" style="position:absolute;bottom:0;left:0;right:0;padding:4px 10px;background:linear-gradient(transparent,rgba(0,0,0,0.6));font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,0.6)"></div>
+      </div>
       <div id="weatherBar"><div class="wx-loading"><span class="spinner" style="width:10px;height:10px;margin-right:6px;border-width:1.5px"></span>Loading forecast...</div></div>
 
       <div class="right-content" id="rightContent">
@@ -674,9 +678,9 @@ const WPS = [
   {id:'horten', type:'waypoint', seq:'·', name:'Horten (after Moss–Horten ferry)',
    lat:59.4117, lng:10.4833, country:'NO',
    note:'West side arrival after Moss–Horten ferry. Continue west on Rv19/Rv35 toward Kongsberg and Drammen.', tags:[]},
-  {id:'g3', type:'gate', seq:'III', name:'Gate III — Suleskard (1,050m)', lat:59.04283, lng:7.14565, country:'NO', note:'Approach from east on Rv9/Fv468 — paved.', tags:[]},
-  {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge (TBC — Sirdal corridor)', lat:59.06, lng:6.90, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}]},
-  {id:'g4', type:'gate', seq:'IV', name:'Gate IV — Lysebotn', lat:59.05483, lng:6.64508, country:'NO', note:'BOOK FERRY AHEAD: Lysebotn–Forsand. billetter.kolumbus.no', tags:[{l:'BOOK FERRY AHEAD',c:'warning'}]},
+  {id:'g3', type:'gate', seq:'III', name:'Gate III — Suleskard (1,050m)', lat:59.04283, lng:7.14565, country:'NO', note:'Approach from east on Rv9/Fv468 — paved.', tags:[], photo:'assets/gate-photos/suleskard.jpeg'},
+  {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge (TBC — Sirdal corridor)', lat:59.06, lng:6.90, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}], photo:'assets/gate-photos/fjord-sauna.jpeg'},
+  {id:'g4', type:'gate', seq:'IV', name:'Gate IV — Lysebotn', lat:59.05483, lng:6.64508, country:'NO', note:'BOOK FERRY AHEAD: Lysebotn–Forsand. billetter.kolumbus.no', tags:[{l:'BOOK FERRY AHEAD',c:'warning'}], photo:'assets/gate-photos/lysebotn.jpeg'},
   {id:'f_lyse', type:'ferry', seq:'⛴', name:'Lysebotn–Forsand Ferry', lat:59.0547, lng:6.6452, country:'NO', note:'Permitted ✅ — BOOK IN ADVANCE. Sells out in summer.', tags:[{l:'PERMITTED',c:'permitted'},{l:'BOOK IN ADVANCE',c:'warning'}]},
   {id:'forsand', type:'waypoint', seq:'·', name:'Forsand (after Lysebotn ferry)',
    lat:59.0427, lng:6.2280, country:'NO',
@@ -688,18 +692,18 @@ const WPS = [
    lat:61.3021, lng:7.3367, country:'NO',
    note:'Road arrival after Solvorn–Ornes ferry. Urnes Stave Church (Gate X) is 2km north.', tags:[]},
   {id:'g10', type:'gate', seq:'X', name:'Gate X — Urnes Stave Church', lat:61.29813, lng:7.32198, country:'NO', note:'AVOID Fodnestunnelen and Amlatunnelen (both BANNED).', tags:[{l:'FODNESTUNNELEN BANNED',c:'banned'},{l:'AMLATUNNELEN BANNED',c:'banned'}]},
-  {id:'g11', type:'gate', seq:'XI', name:'Gate XI — Lom Stave Church', lat:61.83953, lng:8.56631, country:'NO', note:'AVOID E6 Sel–Dombås (BANNED road section).', tags:[{l:'E6 SEL–DOMBÅS BANNED',c:'banned'}]},
+  {id:'g11', type:'gate', seq:'XI', name:'Gate XI — Lom Stave Church', lat:61.83953, lng:8.56631, country:'NO', note:'AVOID E6 Sel–Dombås (BANNED road section).', tags:[{l:'E6 SEL–DOMBÅS BANNED',c:'banned'}], photo:'assets/gate-photos/lom-stave-church.jpeg'},
   {id:'g6', type:'gate', seq:'VI', name:'Gate VI — Sognefjellet (1,434m)', lat:61.55272, lng:7.93937, country:'NO', note:'Highest gate. Rv55. AVOID Gudvangatunnelen (BANNED).', tags:[{l:'GUDVANGATUNNELEN BANNED',c:'banned'}]},
   {id:'g7', type:'gate', seq:'VII', name:'Gate VII — Gaularfjellet (784m)', lat:61.35147, lng:6.5184, country:'NO', note:'Use Fv13. AVOID E39 Vassenden–Skei and E39 Sandane (both BANNED).', tags:[{l:'E39 VASSENDEN–SKEI BANNED',c:'banned'},{l:'E39 SANDANE BANNED',c:'banned'}]},
   {id:'g8', type:'gate', seq:'VIII', name:'Gate VIII — Strynefjellsveg (1,139m)', lat:61.95081, lng:7.3298, country:'NO', note:'Use Gamle Strynefjellsveg. AVOID Kvivstunnelen and Oppljostunnelen (BANNED).', tags:[{l:'KVIVSTUNNELEN BANNED',c:'banned'},{l:'OPPLJOSTUNNELEN BANNED',c:'banned'}]},
   {id:'g14', type:'gate', seq:'XIV', name:'Gate XIV — Dalsnibba (1,476m)', lat:62.04885, lng:7.26859, country:'NO', note:'Toll road FREE for cyclists. AVOID Hellesylt tunnel NORTHBOUND (BANNED).', tags:[{l:'HELLESYLT TUNNEL ↑ BANNED',c:'banned'}]},
-  {id:'g13', type:'gate', seq:'XIII', name:'Gate XIII — Trollstigen (852m)', lat:62.4546, lng:7.66918, country:'NO', note:'From Åndalsnes (north). AVOID Innfjord tunnel (BANNED).', tags:[{l:'INNFJORD TUNNEL BANNED',c:'banned'}]},
+  {id:'g13', type:'gate', seq:'XIII', name:'Gate XIII — Trollstigen (852m)', lat:62.4546, lng:7.66918, country:'NO', note:'From Åndalsnes (north). AVOID Innfjord tunnel (BANNED).', tags:[{l:'INNFJORD TUNNEL BANNED',c:'banned'}], photo:'assets/gate-photos/trollstigen.jpeg'},
   {id:'andalsnes', type:'waypoint', seq:'·', name:'Åndalsnes',
    lat:62.5680, lng:7.7147, country:'NO',
    note:'Routing waypoint between Trollstigen (XIII) and Svøufallet (XII). Rv70 east toward Sunndalsøra.', tags:[]},
   {id:'g12', type:'gate', seq:'XII', name:'Gate XII — Svøufallet', lat:62.50932, lng:9.06695, country:'NO', note:'East detour on Rv70 toward Sunndalsøra — flat valley road.', tags:[]},
   {id:'g15', type:'gate', seq:'XV', name:'Gate XV — Atlantic Ocean Road', lat:63.0098, lng:7.43054, country:'NO', note:'Flat causeway. Use Molde–Vestnes ferry (permitted ✅).', tags:[{l:'FLAT & FAST',c:'permitted'}]},
-  {id:'g16', type:'gate', seq:'XVI', name:'Gate XVI — Vestkapp (310m)', lat:62.18652, lng:5.12587, country:'NO', note:'Final gate. Use Lote–Anda ferry after.', tags:[]},
+  {id:'g16', type:'gate', seq:'XVI', name:'Gate XVI — Vestkapp (310m)', lat:62.18652, lng:5.12587, country:'NO', note:'Final gate. Use Lote–Anda ferry after.', tags:[], photo:'assets/gate-photos/vestkapp.jpeg'},
   {id:'f_lote', type:'ferry', seq:'⛴', name:'Lote–Anda Ferry', lat:61.8544, lng:6.0813, country:'NO', note:'Permitted ✅. Avoids all banned E39+tunnels near Volda.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS BANNED E39+TUNNELS',c:'permitted'}]},
   {id:'anda',        type:'waypoint', seq:'·', name:'Anda (after Lote–Anda ferry)',  lat:61.9628, lng:6.1218,  country:'NO', note:'NO arrival after Lote–Anda ferry. Continue north on Fv651 toward Festøya.', tags:[]},
   {id:'f_fest', type:'ferry', seq:'⛴', name:'Festøya Ferry', lat:62.3749, lng:6.3315, country:'NO', note:'Permitted ✅. ~20 min crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
@@ -708,7 +712,7 @@ const WPS = [
    note:'Road arrival on east side after Festøya ferry. Continue south on Fv61 toward Lauvstad–Volda ferry.', tags:[]},
   {id:'f_lauv', type:'ferry', seq:'⛴', name:'Lauvstad–Volda Ferry', lat:62.1646, lng:5.9425, country:'NO', note:'Permitted ✅. Final ferry into Volda.', tags:[{l:'PERMITTED',c:'permitted'}]},
     // ── INTERMEDIATE ROUTING WAYPOINTS ──────────────────────────,
-  {id:'finish', type:'finish', seq:'F', name:'FINISH — Volda', lat:62.17109, lng:6.00881, country:'NO', note:'Race finish. Triumphal Celebration 8 August 2026 at 20:00.', tags:[]},
+  {id:'finish', type:'finish', seq:'F', name:'FINISH — Volda', lat:62.17109, lng:6.00881, country:'NO', note:'Race finish. Triumphal Celebration 8 August 2026 at 20:00.', tags:[], photo:'assets/gate-photos/volda-finish.jpeg'},
 ];
 
 const LEGS = [
@@ -1084,6 +1088,7 @@ async function selectRoute(id, name) {
   // Re-render to show selected state
   renderRoutes(allRoutes);
 
+  document.getElementById('gatePhotoBar').style.display = 'none';
   document.getElementById('detailBar').innerHTML = `
     <h2>${name}</h2>
     <span class="badge blue">INSPECTING...</span>`;
@@ -1973,8 +1978,20 @@ function selectWp(i) {
   }).join('');
   document.getElementById('detailBar').innerHTML = `<h2>${wp.name}</h2>${badges}`;
 
+  // Show photo if available
+  const photoBar = document.getElementById('gatePhotoBar');
+  const photoImg = document.getElementById('gatePhotoImg');
+  if (wp.photo) {
+    photoImg.src = wp.photo;
+    photoImg.alt = wp.name;
+    document.getElementById('gatePhotoCredit').textContent = wp.name;
+    photoBar.style.display = 'block';
+  } else {
+    photoBar.style.display = 'none';
+  }
+
   // Show weather for gates, start, and finish
-  if (['gate', 'start', 'finish'].includes(wp.type)) {
+  if (['gate', 'start', 'finish', 'refuge'].includes(wp.type)) {
     showGateWeather(wp.lat, wp.lng);
   } else {
     document.getElementById('weatherBar').style.display = 'none';
