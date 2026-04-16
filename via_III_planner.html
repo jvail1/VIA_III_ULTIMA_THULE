@@ -508,6 +508,9 @@
           <button id="kmlToggleBtn" onclick="toggleOfficialMap()">🗺 Official Map</button>
           <button id="poiBtn" onclick="togglePOI()">⛺ Camps · 💧 Water · 🚽 Toilets</button>
           <button id="poiRefreshBtn" onclick="refreshPOI()" style="position: absolute; top: 86px; right: 10px; z-index: 470; font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 12px; border-radius: 4px; border: 1px solid #555; background: rgba(15,15,15,0.78); color: #bbb; cursor: pointer; backdrop-filter: blur(3px); transition: all .15s; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.35); display:none;">↻ Refresh POIs</button>
+          <div id="poiLoadingBadge" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:470;background:rgba(15,15,15,0.82);color:#7db8e8;font-family:'DM Mono',monospace;font-size:11px;padding:5px 14px;border-radius:20px;backdrop-filter:blur(4px);white-space:nowrap;pointer-events:none">
+            <span class="spinner" style="width:9px;height:9px;border-width:1.5px;border-color:rgba(255,255,255,0.2);border-top-color:#7db8e8;margin-right:6px;vertical-align:middle"></span>Loading POIs...
+          </div>
           <iframe id="officialMapFrame" src="" allowfullscreen></iframe>
           <div id="routingOverlay">
             <div class="routing-title">Computing Road Route</div>
@@ -2185,24 +2188,47 @@ const OVERPASS_ENDPOINTS = [
   'https://overpass.kumi.systems/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
+const POI_TILE_SIZE = 0.5;   // degrees — panning within a tile reuses cache
+const POI_TTL_MS   = 24 * 60 * 60 * 1000; // 24h
 
+// Race all endpoints — return whichever replies first successfully
 async function overpassFetch(query) {
-  let lastErr;
-  for (const url of OVERPASS_ENDPOINTS) {
-    try {
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'data=' + encodeURIComponent(query)
-      });
+  return Promise.any(OVERPASS_ENDPOINTS.map(url =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'data=' + encodeURIComponent(query)
+    }).then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return await r.json();
-    } catch(e) {
-      lastErr = e;
-      console.warn('Overpass endpoint failed:', url, e.message);
-    }
-  }
-  throw lastErr;
+      return r.json();
+    })
+  ));
+}
+
+// Round bbox outward to 0.5° grid so nearby views share the same cache key
+function snapBBox(b) {
+  return {
+    south: Math.floor(b.getSouth() / POI_TILE_SIZE) * POI_TILE_SIZE,
+    west:  Math.floor(b.getWest()  / POI_TILE_SIZE) * POI_TILE_SIZE,
+    north: Math.ceil(b.getNorth()  / POI_TILE_SIZE) * POI_TILE_SIZE,
+    east:  Math.ceil(b.getEast()   / POI_TILE_SIZE) * POI_TILE_SIZE,
+  };
+}
+
+function poiCacheKey(s) { return `via_poi_${s.south}_${s.west}_${s.north}_${s.east}`; }
+
+function loadPoiTileCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (Date.now() - p.fetchedAt > POI_TTL_MS) { localStorage.removeItem(key); return null; }
+    return p.elements;
+  } catch(e) { return null; }
+}
+
+function savePoiTileCache(key, elements) {
+  try { localStorage.setItem(key, JSON.stringify({ fetchedAt: Date.now(), elements })); } catch(e) {}
 }
 let poiVisible = false;
 let poiCache = {};
@@ -2225,6 +2251,7 @@ function getPOILatLon(el) {
 function resetPOIButtons() {
   const btn = document.getElementById('poiBtn');
   const refreshBtn = document.getElementById('poiRefreshBtn');
+  const loadingBadge = document.getElementById('poiLoadingBadge');
   if (btn) {
     btn.textContent = '⛺ Camps · 💧 Water · 🚽 Toilets';
     btn.classList.remove('loading');
@@ -2236,75 +2263,73 @@ function resetPOIButtons() {
     refreshBtn.disabled = false;
     refreshBtn.textContent = '↻ Refresh POIs';
   }
+  if (loadingBadge) loadingBadge.style.display = 'none';
 }
 
-function currentPOIBBox() {
-  const b = leafletMap.getBounds().pad(0.05);
-  return `${b.getSouth().toFixed(3)},${b.getWest().toFixed(3)},${b.getNorth().toFixed(3)},${b.getEast().toFixed(3)}`;
-}
+const POI_MIN_ZOOM = 10;
 
 async function loadPOI(forceRefresh = false) {
   if (!leafletMap || !poiLayerGroup) return;
 
   const btn = document.getElementById('poiBtn');
   const refreshBtn = document.getElementById('poiRefreshBtn');
-  const bb = currentPOIBBox();
-  const requestId = ++poiRequestSeq;
 
-  if (btn) {
-    btn.textContent = '⏳ Loading POIs...';
-    btn.classList.add('loading');
-    btn.classList.add('active');
-  }
-  if (refreshBtn) {
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = '⏳ Refreshing...';
-    refreshBtn.style.display = 'block';
-  }
-
-  if (!forceRefresh && poiCache[bb]) {
-    renderPOI(poiCache[bb], requestId);
+  // Require minimum zoom to keep Overpass queries manageable
+  if (leafletMap.getZoom() < POI_MIN_ZOOM) {
+    poiLayerGroup.clearLayers();
+    if (btn) { btn.textContent = '🔍 Zoom in to load POIs (zoom ' + POI_MIN_ZOOM + '+)'; btn.classList.remove('loading'); btn.classList.add('active'); }
+    if (refreshBtn) refreshBtn.style.display = 'none';
     return;
   }
 
-  if (poiAbortController) {
-    try { poiAbortController.abort(); } catch (e) {}
+  // Clear the "zoom in" hint now that zoom is sufficient
+  if (btn && btn.textContent.includes('Zoom in')) {
+    btn.textContent = '⏳ Loading POIs...';
+    btn.classList.add('loading');
   }
-  poiAbortController = new AbortController();
+
+  const snap = snapBBox(leafletMap.getBounds());
+  const cacheKey = poiCacheKey(snap);
+  const bb = `${snap.south},${snap.west},${snap.north},${snap.east}`;
+  const requestId = ++poiRequestSeq;
+
+  if (btn) { btn.textContent = '⏳ Loading POIs...'; btn.classList.add('loading','active'); }
+  if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '⏳ Refreshing...'; refreshBtn.style.display = 'block'; }
+  const loadingBadge = document.getElementById('poiLoadingBadge');
+  if (loadingBadge) loadingBadge.style.display = 'block';
+
+  // Serve from cache (memory first, then localStorage)
+  if (!forceRefresh) {
+    if (poiCache[cacheKey]) { renderPOI(poiCache[cacheKey], requestId); return; }
+    const stored = loadPoiTileCache(cacheKey);
+    if (stored) { poiCache[cacheKey] = stored; renderPOI(stored, requestId); return; }
+  }
 
   try {
-    const q = `[out:json][timeout:20];
+    // Campsites can be polygons — keep way/relation. Water/toilets/showers are almost always nodes.
+    const q = `[out:json][timeout:25];
     (
       node["tourism"="camp_site"](${bb});
       way["tourism"="camp_site"](${bb});
       relation["tourism"="camp_site"](${bb});
       node["tourism"="caravan_site"](${bb});
       way["tourism"="caravan_site"](${bb});
-      relation["tourism"="caravan_site"](${bb});
-
       node["amenity"="drinking_water"](${bb});
-      way["amenity"="drinking_water"](${bb});
-      relation["amenity"="drinking_water"](${bb});
       node["amenity"="water_point"](${bb});
-      way["amenity"="water_point"](${bb});
-      relation["amenity"="water_point"](${bb});
-
       node["amenity"="toilets"](${bb});
-      way["amenity"="toilets"](${bb});
-      relation["amenity"="toilets"](${bb});
       node["amenity"="shower"](${bb});
-      way["amenity"="shower"](${bb});
-      relation["amenity"="shower"](${bb});
     );
     out center body;`;
 
     const d = await overpassFetch(q);
-    poiCache[bb] = d.elements || [];
-    renderPOI(poiCache[bb], requestId);
+    const elements = d.elements || [];
+    poiCache[cacheKey] = elements;
+    savePoiTileCache(cacheKey, elements);
+    renderPOI(elements, requestId);
+    if (elements.length === 0) showToast('No POIs found here — try zooming in further', 'info');
   } catch(e) {
-    if (e.name === 'AbortError') return;
     resetPOIButtons();
-    showToast('Could not load POIs: ' + e.message, 'error');
+    showToast('Could not load POIs: ' + (e.errors ? e.errors[0]?.message : e.message), 'error');
   }
 }
 
@@ -2388,16 +2413,29 @@ function refreshPOI() {
   loadPOI(true);
 }
 
+let poiMoveTimer = null;
 function setupPOIMapListener() {
   if (!leafletMap) return;
   leafletMap.on('zoomend', () => {
-    if (!savedRouteSegments.length || !routeLayerGroup) return;
-    const layers = [];
-    routeLayerGroup.eachLayer(l => layers.push(l));
-    if (layers.length === 0) {
-      savedRouteSegments.forEach(seg =>
-        L.polyline(seg.latlngs, seg.options).addTo(routeLayerGroup)
-      );
+    // Restore route polylines if cleared
+    if (savedRouteSegments.length && routeLayerGroup) {
+      const layers = [];
+      routeLayerGroup.eachLayer(l => layers.push(l));
+      if (layers.length === 0) {
+        savedRouteSegments.forEach(seg =>
+          L.polyline(seg.latlngs, seg.options).addTo(routeLayerGroup)
+        );
+      }
+    }
+    if (poiVisible) {
+      clearTimeout(poiMoveTimer);
+      poiMoveTimer = setTimeout(() => loadPOI(false), 400);
+    }
+  });
+  leafletMap.on('moveend', () => {
+    if (poiVisible) {
+      clearTimeout(poiMoveTimer);
+      poiMoveTimer = setTimeout(() => loadPOI(false), 400);
     }
   });
 }
