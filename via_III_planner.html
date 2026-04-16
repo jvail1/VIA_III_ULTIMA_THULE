@@ -536,7 +536,8 @@
       </div>
 
       <div id="gatePhotoBar" style="display:none;height:140px;flex-shrink:0;overflow:hidden;position:relative;background:#111">
-        <img id="gatePhotoImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;opacity:0.85">
+        <img id="gatePhotoImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;opacity:0.85"
+             onerror="document.getElementById('gatePhotoBar').style.display='none'">
         <div id="gatePhotoCredit" style="position:absolute;bottom:0;left:0;right:0;padding:4px 10px;background:linear-gradient(transparent,rgba(0,0,0,0.6));font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,0.6)"></div>
       </div>
       <div id="weatherBar"><div class="wx-loading"><span class="spinner" style="width:10px;height:10px;margin-right:6px;border-width:1.5px"></span>Loading forecast...</div></div>
