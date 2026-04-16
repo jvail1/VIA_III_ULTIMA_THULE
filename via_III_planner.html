@@ -1537,6 +1537,10 @@ async function previewRoute() {
   );
   if (pts.length < 2) { showToast('Select at least 2 waypoints','error'); btn.disabled=false; btn.innerHTML='🗺 Preview on Road Network'; return; }
 
+  const routingPts = injectRoutingPins(pts);
+  const injectedCount = routingPts.length - pts.length;
+  if (injectedCount > 0) showToast(`Routing via ${injectedCount} user pin${injectedCount!==1?'s':''}`, 'info');
+
   document.getElementById('routingOverlay').classList.add('active');
   routeLayerGroup && routeLayerGroup.clearLayers();
   savedRouteSegments = [];
@@ -1548,13 +1552,13 @@ async function previewRoute() {
   const wpLegColor = {};
   LEGS.forEach((leg, li) => { if (selLegs.has(leg.id)) leg.wps.forEach(id => { wpLegColor[id] = LEG_COLORS[li % LEG_COLORS.length]; }); });
 
-  const segments = pts.length - 1;
+  const segments = routingPts.length - 1;
   let totalDist = 0;
-  const allTP = [{lat: pts[0].lat, lng: pts[0].lng}];
+  const allTP = [{lat: routingPts[0].lat, lng: routingPts[0].lng}];
   let failedSegs = 0;
 
   for (let i = 0; i < segments; i++) {
-    const fw = pts[i], tw = pts[i+1];
+    const fw = routingPts[i], tw = routingPts[i+1];
     fill.style.width = Math.round((i/segments)*100) + '%';
     stepEl.textContent = `Segment ${i+1}/${segments}: ${fw.name.split('—')[0].trim()} → ${tw.name.split('—')[0].trim()}`;
     const color = wpLegColor[fw.id] || wpLegColor[tw.id] || '#888';
@@ -1677,17 +1681,63 @@ function renderPinsList() {
     const distStr = pin.routeDistM != null
       ? `<span style="color:#2a7a3b">${pin.routeDistM < 1000 ? Math.round(pin.routeDistM)+'m' : (pin.routeDistM/1000).toFixed(1)+'km'} from route</span> · `
       : '';
+    const wpBorder = pin.useAsWaypoint ? 'border-left:3px solid #7c3aed;padding-left:11px;background:#f9f5ff;' : '';
     return `
-      <div class="pin-list-item">
-        <div class="pin-list-icon">📌</div>
+      <div class="pin-list-item" style="${wpBorder}">
+        <div class="pin-list-icon" style="${pin.useAsWaypoint ? 'background:#7c3aed' : ''}">📌</div>
         <div class="pin-list-info">
           <div class="pin-list-name">${pin.name}</div>
           <div class="pin-list-meta">${distStr}${pin.lat.toFixed(4)}°N ${Math.abs(pin.lng).toFixed(4)}°E</div>
           ${pin.note ? `<div class="pin-list-note">${pin.note}</div>` : ''}
+          <label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;cursor:pointer;font-size:11px;color:${pin.useAsWaypoint ? '#7c3aed' : 'var(--muted)'}">
+            <input type="checkbox" ${pin.useAsWaypoint ? 'checked' : ''} onchange="togglePinWaypoint('${pin.id}')" style="accent-color:#7c3aed;cursor:pointer">
+            Use as routing via-point
+          </label>
         </div>
         <button class="pin-del-btn" onclick="removeUserPin('${pin.id}')" title="Delete pin">✕</button>
       </div>`;
   }).join('');
+}
+
+function togglePinWaypoint(id) {
+  const pin = userPins.find(p => p.id === id);
+  if (!pin) return;
+  pin.useAsWaypoint = !pin.useAsWaypoint;
+  saveUserPins();
+  renderPinsList();
+}
+
+function injectRoutingPins(pts) {
+  const active = userPins.filter(p => p.useAsWaypoint);
+  if (!active.length) return pts;
+
+  // For each active pin find the gap [i, i+1] in pts that minimises combined distance
+  const groups = {};
+  for (const pin of active) {
+    let bestIdx = 0, bestScore = Infinity;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const score = haversine(pin.lat, pin.lng, pts[i].lat, pts[i].lng)
+                  + haversine(pin.lat, pin.lng, pts[i+1].lat, pts[i+1].lng);
+      if (score < bestScore) { bestScore = score; bestIdx = i; }
+    }
+    if (!groups[bestIdx]) groups[bestIdx] = [];
+    groups[bestIdx].push(pin);
+  }
+
+  // Build new array, inserting pins at their chosen gaps sorted by distance from pts[i]
+  const result = [];
+  for (let i = 0; i < pts.length; i++) {
+    result.push(pts[i]);
+    if (groups[i]) {
+      groups[i].sort((a, b) =>
+        haversine(a.lat, a.lng, pts[i].lat, pts[i].lng) -
+        haversine(b.lat, b.lng, pts[i].lat, pts[i].lng));
+      for (const pin of groups[i]) {
+        result.push({ lat: pin.lat, lng: pin.lng, name: pin.name, type: 'pin', id: pin.id });
+      }
+    }
+  }
+  return result;
 }
 
 function addUserPin(lat, lng, name, note) {
@@ -1697,6 +1747,7 @@ function addUserPin(lat, lng, name, note) {
     name: name || 'My pin',
     note: note || '',
     routeDistM: null,
+    useAsWaypoint: false,
   };
   // If route is loaded, compute distance to route
   if (window._lastRoutePts && window._lastRoutePts.length) {
