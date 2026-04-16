@@ -2430,6 +2430,8 @@ function renderPOI(elements, requestId) {
     refreshBtn.textContent = '↻ Refresh POIs';
     refreshBtn.style.display = 'block';
   }
+  const loadingBadge = document.getElementById('poiLoadingBadge');
+  if (loadingBadge) loadingBadge.style.display = 'none';
   showToast(`${c.camp} camps · ${c.water} water · ${c.toilet} toilets`, 'success');
 }
 
