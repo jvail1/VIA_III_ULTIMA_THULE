@@ -1195,6 +1195,7 @@ async function selectRoute(id, name) {
     // Render route on Leaflet map with violation + gate overlays
     renderRouteOnMap(name, pts, result);
     updatePinRouteDistances(pts);
+    renderUserPins(); // refresh pin layer after route load
 
     // Update sidebar badge
     const badge = document.getElementById(`badge-${id}`);
@@ -1583,6 +1584,15 @@ async function previewRoute() {
     totalDist += sd;
     sc.slice(1).forEach(([lat,lng]) => allTP.push({lat,lng}));
     await sleep(80);
+  }
+
+  // Mark injected routing pins on the map
+  for (const rp of routingPts) {
+    if (rp.type === 'pin') {
+      L.circleMarker([rp.lat, rp.lng], {
+        radius: 8, color: 'white', weight: 2, fillColor: '#7c3aed', fillOpacity: 1
+      }).bindTooltip(`📌 ${rp.name} (via-point)`).addTo(routeLayerGroup);
+    }
   }
 
   fill.style.width = '100%'; stepEl.textContent = 'Done!';
@@ -2093,15 +2103,15 @@ async function createRoute() {
       : routedTrackPoints;
     showToast('Using road-routed track points...', 'info');
   } else {
-    const seen = new Set(), wpPts = [];
+    const seen = new Set(), basePts = [];
     LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
       l.wps.forEach(id => {
         if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
-          seen.add(id); wpPts.push(wpMap[id]);
+          seen.add(id); basePts.push(wpMap[id]);
         }
       })
     );
-    trackPts = wpPts;
+    trackPts = injectRoutingPins(basePts);
     if (trackPts.length < 2) {
       showToast('Select at least 2 waypoints (or run Preview first for road routing)', 'error');
       btn.disabled = false; btn.innerHTML = '✚ Create on RideWithGPS'; return;
@@ -2149,14 +2159,15 @@ async function createRoute() {
 // ── GPX ───────────────────────────────────────────────────────
 function downloadGPX() {
   const name = document.getElementById('newRouteName').value.trim() || 'VIA Chapter III';
-  const seen = new Set(), pts = [];
+  const seen = new Set(), basePts = [];
   LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
     l.wps.forEach(id => {
       if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
-        seen.add(id); pts.push(wpMap[id]);
+        seen.add(id); basePts.push(wpMap[id]);
       }
     })
   );
+  const pts = injectRoutingPins(basePts);
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const sym = {ferry:'Anchor', start:'Flag, Green', finish:'Flag, Red', refuge:'Campground', gate:'Waypoint'};
   const wptXml = pts.map(w=>`  <wpt lat="${w.lat}" lon="${w.lng}">
