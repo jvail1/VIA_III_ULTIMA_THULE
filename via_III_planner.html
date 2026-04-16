@@ -708,93 +708,6 @@ function haversine(lat1, lng1, lat2, lng2) {
 }
 
 
-// ── RECOMMENDED CORRIDOR CHECKPOINTS ─────────────────────────
-// Key intermediate waypoints for each leg representing the efficient
-// routing decisions from the race analysis. Missing these triggers
-// an amber advisory (not a red violation).
-// leg: which leg this belongs to for grouping
-// r: detection radius in metres
-const CORRIDOR = [
-
-  // ── LEG 1: Start → Brocken ───────────────────────────────────
-  { leg:'L1', name:'Arnhem/Nijmegen crossing', lat:51.9851, lng:5.8987, r:15000,
-    note:'Recommended Germany entry via Arnhem–Nijmegen flat corridor. Avoids longer southern routing through Belgium.' },
-  { leg:'L1', name:'Wernigerode (Brocken approach)', lat:51.8356, lng:10.7873, r:5000,
-    note:'Recommended approach to Brocken summit from Wernigerode via B244 — the legal paved cycling road.' },
-
-  // ── LEG 2: Brocken → Gate II via Sweden ──────────────────────
-  { leg:'L2', name:'Hamburg corridor', lat:53.5753, lng:9.9910, r:20000,
-    note:'Recommended north corridor through Hamburg on flat B-roads. Avoid Autobahn but stay on direct B4/B5 route.' },
-  { leg:'L2', name:"Puttgarden–Rødby ferry (DE→DK)", lat:54.5009, lng:11.2260, r:4000,
-    note:"Best route ✅. Takes a large chunk of German B-road riding off the table. ~45 min, walk-on, no booking needed. From Rødby head northwest across Denmark to Helsingør for the mandatory Sweden crossing. Riding via Flensburg instead adds ~100km of unnecessary Jutland miles." },
-  { leg:'L2', name:'Helsingør ferry terminal', lat:56.0328, lng:12.6167, r:3000,
-    note:'Mandatory DK→SE crossing point. All other Denmark–Sweden crossings (Göteborg, Malmö, Trelleborg, Hirtshals) are banned.' },
-  { leg:'L2', name:'Helsingborg arrival (Sweden)', lat:56.0434, lng:12.6918, r:3000,
-    note:'Sweden arrival after Helsingør ferry. Head north on Cykelspåret coastal route — avoids E6 motorway.' },
-  { leg:'L2', name:'Halmstad (Sweden coastal corridor)', lat:56.6745, lng:12.8577, r:15000,
-    note:'Recommended Swedish coastal corridor via Rv40/smaller roads. Avoids the E6 motorway which is not suitable for cycling.' },
-  { leg:'L2', name:'Svinesund Bridge (SE→NO border)', lat:59.0944, lng:11.2518, r:3000,
-    note:'Recommended Sweden→Norway crossing. Use the old lower bridge alongside the E6 arch — it has a dedicated cycle path.' },
-
-  // ── LEG 3: Gate II → Gate III + Refuge ───────────────────────
-  {leg:'L3', name:'Rv9 corridor (Kristiansand hinterland)', lat:58.5760, lng:7.9964, r:20000,
-    note:'Recommended inland corridor via Rv9 toward Suleskard. Avoid fast E18 coastal road.' },
-
-  // ── LEG 4: Gate IV — Lysebotn ────────────────────────────────
-  { leg:'L4', name:'Lysevegen summit (above Lysebotn)', lat:59.0805, lng:6.7018, r:3000,
-    note:'If not taking the Lysebotn–Forsand ferry, the recommended exit is the Lysevegen 27-hairpin road to 932m. Book the ferry in advance to avoid this climb.' },
-  { leg:'L4', name:'Forsand (after Lysebotn ferry)', lat:59.0427, lng:6.2280, r:5000,
-    note:'Recommended arrival after Lysebotn–Forsand ferry. Continue north via Rv13/Hardanger corridor.' },
-
-  // ── LEG 5: Gates V, IX, X, XI ────────────────────────────────
-  { leg:'L5', name:'Eidfjord / Rv7 (approach to Vøringsfossen)', lat:60.4707, lng:7.0607, r:8000,
-    note:'Recommended approach to Vøringsfossen via Rv7 from Hardanger. Gate V is roadside — minimal detour.' },
-  { leg:'L5', name:'Rv50 Filefjell (Borgund alternative)', lat:61.1073, lng:8.2614, r:8000,
-    note:'Recommended alternative to the banned Laerdalstunnelen. Rv50 Filefjell mountain road is paved and legal between Lærdal and the Borgund area.' },
-  { leg:'L5', name:'Solvorn (Urnes ferry departure)', lat:61.3011, lng:7.2468, r:2000,
-    note:'Departure point for the Solvorn–Ornes ferry (permitted ✅) to reach Urnes Stave Church (Gate X). Walk-on.' },
-  { leg:'L5', name:'Gaupne (north from Urnes)', lat:61.4017, lng:7.2987, r:5000,
-    note:'Recommended routing north from Urnes via Gaupne on Rv55 toward Sognefjellet. Avoids banned Fodnestunnelen.' },
-  { leg:'L5', name:'E15 valley (Lom approach)', lat:61.7500, lng:8.9500, r:12000,
-    note:'Recommended fast valley approach to Lom Stave Church (Gate XI) on E15.' },
-
-  // ── LEG 6: Gates VI–VIII ──────────────────────────────────────
-  { leg:'L6', name:'Rv55 Sognefjellet (highest point)', lat:61.5527, lng:7.9394, r:4000,
-    note:"Recommended approach to Gate VI (1,434m) from Lom (east) on Rv55 — Norway's highest national road. Long gradual climb, fast descent west." },
-  { leg:'L6', name:'Fv13 Gaularfjellet corridor', lat:61.3515, lng:6.5184, r:6000,
-    note:'Recommended route through Gate VII. Use Fv13 — do NOT use E39 Vassenden–Skei or E39 Sandane (both banned).' },
-  { leg:'L6', name:'Grotli (Strynefjellsveg east approach)', lat:61.9741, lng:7.8960, r:5000,
-    note:'Recommended eastern approach to Gate VIII via E15/Grotli. Turn onto Gamle Strynefjellsveg from here — avoids banned Kvivstunnelen and Oppljostunnelen.' },
-  { leg:'L6', name:'Stryn (Strynefjellsveg descent)', lat:61.9072, lng:6.7210, r:5000,
-    note:'Recommended descent from Strynefjellsveg into Stryn, then north toward Geiranger.' },
-
-  // ── LEG 7: Gates XII–XIV ──────────────────────────────────────
-  { leg:'L7', name:'Geiranger village (Dalsnibba approach)', lat:62.1001, lng:7.2058, r:3000,
-    note:'Recommended approach to Dalsnibba toll road (Gate XIV) from Geiranger village. Toll road is FREE for cyclists.' },
-  { leg:'L7', name:'Ørnvegen road (north from Geiranger)', lat:62.1487, lng:7.1344, r:5000,
-    note:'Recommended north exit from Geiranger via Ørnvegen. Avoids the banned Hellesylt tunnel northbound.' },
-  { leg:'L7', name:'Åndalsnes (Trollstigen north approach)', lat:62.5680, lng:7.7147, r:5000,
-    note:'Recommended approach to Trollstigen (Gate XIII) from Åndalsnes (north), as specified in the compendium. Best views, avoids the banned Innfjord tunnel.' },
-  { leg:'L7', name:'Rv70 east (Svøufallet approach)', lat:62.5700, lng:8.5500, r:15000,
-    note:'Recommended approach to Gate XII (Svøufallet) via Rv70 east toward Sunndalsøra — flat valley road. Tag and return west.' },
-
-  // ── LEG 8: Gate XV — Atlantic Road ───────────────────────────
-  { leg:'L8', name:'Averøy / Atlantic Road causeway', lat:63.0098, lng:7.4305, r:3000,
-    note:'Atlantic Road is flat and fast — ideal for road bikes. The Storseisundet bridge is the iconic landmark to tag.' },
-  { leg:'L8', name:'Molde–Vestnes ferry (Romsdalsfjord crossing)', lat:62.7397, lng:7.1596, r:5000,
-    note:'Recommended permitted ferry across Romsdalsfjord (Molde–Vestnes ✅). Much faster than riding around the fjord.' },
-
-  // ── LEG 9: Gate XVI → Finish ──────────────────────────────────
-  { leg:'L9', name:'Selje / Fv617 (Vestkapp approach)', lat:62.0484, lng:5.3621, r:5000,
-    note:'Recommended approach to Gate XVI (Vestkapp) via Fv617 from Selje. Check wind forecast — exposed Atlantic cliffs.' },
-  { leg:'L9', name:'Lote–Anda ferry (Nordfjord crossing)', lat:61.8544, lng:6.0813, r:3000,
-    note:'Recommended permitted ferry ✅ across Nordfjord. Critical for avoiding all the banned E39 sections and tunnels near Volda.' },
-  { leg:'L9', name:'Festøya ferry', lat:62.3749, lng:6.3315, r:3000,
-    note:'Recommended permitted ferry ✅. ~20 min crossing. Connects south toward Lauvstad.' },
-  { leg:'L9', name:'Lauvstad–Volda ferry', lat:62.1646, lng:5.9425, r:2000,
-    note:'Final permitted ferry ✅ into Volda. Using this instead of the E39 road avoids all banned tunnel and road sections near the finish.' },
-];
-
 // ── COMPLIANCE CHECK ──────────────────────────────────────────
 function inspectRoute(trackPoints) {
   // trackPoints: array of {lat, lng} or [lat, lng]
@@ -836,25 +749,7 @@ function inspectRoute(trackPoints) {
     else gatesMissed.push({...gate, closestApproach: Math.round(minDist)});
   }
 
-  // Check recommended corridor checkpoints
-  const corridorHits   = [];
-  const corridorMissed = [];
-  for (const ck of CORRIDOR) {
-    let minDist = Infinity;
-    let closestPt = null;
-    for (let i = 0; i < pts.length; i += 3) {
-      const d = haversine(pts[i].lat, pts[i].lng, ck.lat, ck.lng);
-      if (d < minDist) { minDist = d; closestPt = pts[i]; }
-      if (minDist <= ck.r) break;
-    }
-    if (minDist <= ck.r) {
-      corridorHits.push({ ...ck, dist: Math.round(minDist) });
-    } else {
-      corridorMissed.push({ ...ck, closestApproach: Math.round(minDist), closestPt });
-    }
-  }
-
-  return {violations, warnings, gateHits, gatesMissed, corridorHits, corridorMissed};
+  return {violations, warnings, gateHits, gatesMissed};
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────
@@ -1290,7 +1185,7 @@ async function selectRoute(id, name) {
 }
 
 function renderComplianceReport(container, name, route, pts, result) {
-  const {violations, gateHits, gatesMissed, corridorHits, corridorMissed} = result;
+  const {violations, gateHits, gatesMissed} = result;
   const km = pts.length > 0 ? ((route.distance||0)/1000).toFixed(0) : '?';
 
   let html = `
@@ -1309,15 +1204,11 @@ function renderComplianceReport(container, name, route, pts, result) {
         <span class="lbl">Gates missed</span>
       </div>
       <div class="summary-stat">
-        <span class="num ${corridorMissed.length > 3 ? 'amber' : 'green'}">${corridorMissed.length}</span>
-        <span class="lbl">Corridor advisories</span>
-      </div>
-      <div class="summary-stat">
         <span class="num green">${gateHits.length}</span>
         <span class="lbl">Gates hit</span>
       </div>
       <div class="summary-stat">
-        <span class="num" style="color:var(--accent2)">${BANNED.length + CORRIDOR.length}</span>
+        <span class="num" style="color:var(--accent2)">${BANNED.length}</span>
         <span class="lbl">Rules checked</span>
       </div>
     </div>`;
@@ -1411,52 +1302,6 @@ function renderComplianceReport(container, name, route, pts, result) {
             </div>
           </div>
         </div>`;
-    }
-    html += `</div>`;
-  }
-
-  // CORRIDOR ADVISORIES
-  if (corridorMissed.length > 0) {
-    // Group by leg
-    const legNames = {
-      L1:'Leg 1: Start → Brocken', L2:'Leg 2: Brocken → Gate II (via Sweden)',
-      L3:'Leg 3: Gate II → Refuge', L4:'Leg 4: Lysebotn',
-      L5:'Leg 5: Stave churches', L6:'Leg 6: Sognefjellet loop',
-      L7:'Leg 7: Dalsnibba + Trollstigen', L8:'Leg 8: Atlantic Road',
-      L9:'Leg 9: Vestkapp → Finish'
-    };
-    const byLeg = {};
-    for (const ck of corridorMissed) {
-      if (!byLeg[ck.leg]) byLeg[ck.leg] = [];
-      byLeg[ck.leg].push(ck);
-    }
-
-    html += `<div class="gate-check-section">
-      <h4>⚡ Routing Advisories — ${corridorMissed.length} recommended corridor point${corridorMissed.length!==1?'s':''} not visited</h4>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
-        These are not rule violations — your route is still legal. These are efficiency and safety recommendations from the race analysis, flagged because your route doesn't pass through the recommended corridor.
-      </p>`;
-
-    for (const [leg, checks] of Object.entries(byLeg)) {
-      html += `<div style="margin-bottom:10px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">${legNames[leg]||leg}</div>`;
-      for (const ck of checks) {
-        const kmAway = ck.closestApproach > 1000 ? (ck.closestApproach/1000).toFixed(1)+'km' : ck.closestApproach+'m';
-        html += `
-          <div class="violation-item">
-            <div class="violation-icon">⚡</div>
-            <div class="violation-body">
-              <div class="violation-name warn">${ck.name}</div>
-              <div class="violation-detail">${ck.note}</div>
-              <div class="violation-coords">Closest approach: ${kmAway} away · ${ck.lat.toFixed(4)}, ${ck.lng.toFixed(4)}</div>
-              <div class="violation-actions">
-                <a href="https://ridewithgps.com/routes/new?start_lat=${ck.lat}&start_lng=${ck.lng}" target="_blank" class="btn-sm">Open in RWGPS ↗</a>
-                <a href="https://www.google.com/maps?q=${ck.lat},${ck.lng}" target="_blank" class="btn-sm">Maps ↗</a>
-              </div>
-            </div>
-          </div>`;
-      }
-      html += `</div>`;
     }
     html += `</div>`;
   }
@@ -1793,22 +1638,6 @@ function renderRouteOnMap(routeName, pts, result) {
     }).bindTooltip(wp.name).addTo(routeLayerGroup);
   }
 
-  // Corridor advisory markers — amber = missed, faint green = hit
-  for (const ck of (result.corridorMissed || [])) {
-    L.circleMarker([ck.lat, ck.lng], {
-      radius: 6, color: 'white', weight: 2, fillColor: '#b8860b', fillOpacity: 0.85
-    }).bindPopup(`<div class="violation-popup">
-      <h4 style="color:#b8860b">⚡ ${ck.name}</h4>
-      <p>${ck.note}</p>
-      <br><a href="https://ridewithgps.com/routes/new?start_lat=${ck.lat}&start_lng=${ck.lng}" target="_blank">Open in RWGPS ↗</a>
-    </div>`).addTo(routeLayerGroup);
-  }
-  for (const ck of (result.corridorHits || [])) {
-    L.circleMarker([ck.lat, ck.lng], {
-      radius: 5, color: 'white', weight: 1.5, fillColor: '#2a7a3b', fillOpacity: 0.5
-    }).bindTooltip(`✓ ${ck.name}`).addTo(routeLayerGroup);
-  }
-
   // Map legend
   const legend = L.control({ position: 'bottomright' });
   legend.onAdd = () => {
@@ -1819,7 +1648,7 @@ function renderRouteOnMap(routeName, pts, result) {
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8410a;margin-right:5px;vertical-align:middle"></span>Violation</div>
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2a7a3b;margin-right:5px;vertical-align:middle"></span>Gate hit</div>
       <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-right:5px;vertical-align:middle"></span>Gate missed</div>
-      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#b8860b;margin-right:5px;vertical-align:middle"></span>Corridor advisory</div>`;
+      `;
     return d;
   };
   // Only add legend once
