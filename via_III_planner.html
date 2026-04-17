@@ -404,7 +404,11 @@
   .pin-popup-form .pin-save-btn { padding: 5px 12px; background: #7c3aed; color: white; border: none; border-radius: 3px; font-size: 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
   .pin-popup-form .pin-save-btn:hover { background: #6d28d9; }
   /* Pins sidebar list */
-  .pin-list-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #f0ebe3; }
+  .pin-list-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #f0ebe3; cursor: default; transition: background 0.1s; }
+  .pin-list-item.drag-over { background: #f0ebff; border-top: 2px solid #7c3aed; }
+  .pin-list-item.dragging { opacity: 0.4; }
+  .pin-drag-handle { color: #ccc; cursor: grab; font-size: 14px; padding: 2px 2px 0; flex-shrink: 0; user-select: none; line-height: 1; margin-top: 3px; }
+  .pin-drag-handle:active { cursor: grabbing; }
   .pin-list-icon { width: 22px; height: 22px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 10px; color: white; margin-top: 1px; }
   .pin-list-info { flex: 1; min-width: 0; }
   .pin-list-name { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; line-height: 1.2; }
@@ -1693,16 +1697,23 @@ function renderPinsList() {
     return;
   }
 
-  el.innerHTML = userPins.map(pin => {
+  const activeWpIds = userPins.filter(p => p.useAsWaypoint).map(p => p.id);
+
+  el.innerHTML = userPins.map((pin, idx) => {
     const distStr = pin.routeDistM != null
       ? `<span style="color:#2a7a3b">${pin.routeDistM < 1000 ? Math.round(pin.routeDistM)+'m' : (pin.routeDistM/1000).toFixed(1)+'km'} from route</span> · `
       : '';
     const wpBorder = pin.useAsWaypoint ? 'border-left:3px solid #7c3aed;padding-left:11px;background:#f9f5ff;' : '';
+    const wpOrder = pin.useAsWaypoint ? activeWpIds.indexOf(pin.id) + 1 : '';
+    const orderBadge = pin.useAsWaypoint
+      ? `<span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:white;background:#7c3aed;border-radius:9px;padding:1px 5px;margin-left:5px;vertical-align:middle">#${wpOrder}</span>`
+      : '';
     return `
-      <div class="pin-list-item" style="${wpBorder}">
+      <div class="pin-list-item" style="${wpBorder}" draggable="true" data-pin-id="${pin.id}">
+        <div class="pin-drag-handle" title="Drag to reorder">⠿</div>
         <div class="pin-list-icon" style="${pin.useAsWaypoint ? 'background:#7c3aed' : ''}">📌</div>
         <div class="pin-list-info">
-          <div class="pin-list-name">${pin.name}</div>
+          <div class="pin-list-name">${pin.name}${orderBadge}</div>
           <div class="pin-list-meta">${distStr}${pin.lat.toFixed(4)}°N ${Math.abs(pin.lng).toFixed(4)}°E</div>
           ${pin.note ? `<div class="pin-list-note">${pin.note}</div>` : ''}
           <label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;cursor:pointer;font-size:11px;color:${pin.useAsWaypoint ? '#7c3aed' : 'var(--muted)'}">
@@ -1713,6 +1724,39 @@ function renderPinsList() {
         <button class="pin-del-btn" onclick="removeUserPin('${pin.id}')" title="Delete pin">✕</button>
       </div>`;
   }).join('');
+
+  // Wire up drag-to-reorder
+  let dragSrcId = null;
+  el.querySelectorAll('.pin-list-item').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrcId = row.dataset.pinId;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      el.querySelectorAll('.pin-list-item').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.querySelectorAll('.pin-list-item').forEach(r => r.classList.remove('drag-over'));
+      if (row.dataset.pinId !== dragSrcId) row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      const targetId = row.dataset.pinId;
+      if (!dragSrcId || dragSrcId === targetId) return;
+      const srcIdx = userPins.findIndex(p => p.id === dragSrcId);
+      const tgtIdx = userPins.findIndex(p => p.id === targetId);
+      if (srcIdx === -1 || tgtIdx === -1) return;
+      const [moved] = userPins.splice(srcIdx, 1);
+      userPins.splice(tgtIdx, 0, moved);
+      saveUserPins();
+      renderPinsList();
+      rerouteIfNeeded();
+    });
+  });
 }
 
 function togglePinWaypoint(id) {
@@ -1721,6 +1765,10 @@ function togglePinWaypoint(id) {
   pin.useAsWaypoint = !pin.useAsWaypoint;
   saveUserPins();
   renderPinsList();
+}
+
+function rerouteIfNeeded() {
+  if (routedTrackPoints && routedTrackPoints.length >= 2) previewRoute();
 }
 
 function injectRoutingPins(pts) {
@@ -1737,18 +1785,16 @@ function injectRoutingPins(pts) {
       if (score < bestScore) { bestScore = score; bestIdx = i; }
     }
     if (!groups[bestIdx]) groups[bestIdx] = [];
-    groups[bestIdx].push(pin);
+    groups[bestIdx].push({ pin, srcIdx: active.indexOf(pin) });
   }
 
-  // Build new array, inserting pins at their chosen gaps sorted by distance from pts[i]
+  // Build new array, inserting pins at their chosen gaps in user-defined order
   const result = [];
   for (let i = 0; i < pts.length; i++) {
     result.push(pts[i]);
     if (groups[i]) {
-      groups[i].sort((a, b) =>
-        haversine(a.lat, a.lng, pts[i].lat, pts[i].lng) -
-        haversine(b.lat, b.lng, pts[i].lat, pts[i].lng));
-      for (const pin of groups[i]) {
+      groups[i].sort((a, b) => a.srcIdx - b.srcIdx);
+      for (const { pin } of groups[i]) {
         result.push({ lat: pin.lat, lng: pin.lng, name: pin.name, type: 'pin', id: pin.id });
       }
     }
