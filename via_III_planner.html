@@ -1575,20 +1575,27 @@ async function previewRoute() {
     const color = wpLegColor[fw.id] || wpLegColor[tw.id] || '#888';
     let sc, sd;
     if (fw.type === 'ferry') {
-      // Departing FROM a ferry = this segment is the water crossing itself → always dashed
+      // Water crossing segment (departing from ferry terminal) — always dashed straight line
       sc = [[fw.lat,fw.lng],[tw.lat,tw.lng]]; sd = haversine(fw.lat,fw.lng,tw.lat,tw.lng);
       L.polyline(sc, {color, weight:2.5, opacity:0.75, dashArray:'6 5'}).addTo(routeLayerGroup);
     } else {
-      // Land segment — including road approaches TO ferry terminals — try OSRM
+      // Land segment — try OSRM, fall back to dashed line if detour ratio too high (water crossing)
+      const straightM = haversine(fw.lat, fw.lng, tw.lat, tw.lng);
       const res = await osrmRoute(fw, tw);
-      if (res) {
+      const detourRatio = res ? res.distanceM / Math.max(straightM, 1) : Infinity;
+      if (res && detourRatio <= 4) {
         sc = res.coords; sd = res.distanceM;
         L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
         L.polyline(sc, {color, weight:3.5, opacity:0.85}).addTo(routeLayerGroup);
       } else {
-        failedSegs++;
-        sc = [[fw.lat,fw.lng],[tw.lat,tw.lng]]; sd = haversine(fw.lat,fw.lng,tw.lat,tw.lng);
-        L.polyline(sc, {color, weight:2.5, opacity:0.6, dashArray:'3 4'}).addTo(routeLayerGroup);
+        // OSRM failed or routed a massive detour (likely a water crossing) — draw as ferry line
+        if (res && detourRatio > 4) {
+          console.log(`Segment ${fw.name} → ${tw.name}: detour ratio ${detourRatio.toFixed(1)}x — treating as water crossing`);
+        } else {
+          failedSegs++;
+        }
+        sc = [[fw.lat,fw.lng],[tw.lat,tw.lng]]; sd = straightM;
+        L.polyline(sc, {color, weight:2.5, opacity:0.75, dashArray:'6 5'}).addTo(routeLayerGroup);
       }
     }
     totalDist += sd;
