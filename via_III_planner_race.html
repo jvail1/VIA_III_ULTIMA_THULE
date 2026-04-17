@@ -1,0 +1,2556 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VIA Chapter III — Ultima Thule Route Planner</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8410a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VIA Planner">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap');
+
+  :root {
+    --ink: #0f0f0f;
+    --paper: #f5f0e8;
+    --accent: #c8410a;
+    --accent2: #1a5c8a;
+    --green: #2a7a3b;
+    --muted: #6b6560;
+    --border: #d4cdc4;
+    --card: #ffffff;
+    --warn: #b8860b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Barlow', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; font-size: 14px; }
+
+  /* ── LOGIN ── */
+  #loginScreen { position: fixed; inset: 0; background: var(--ink); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+  .login-box { background: var(--paper); border-radius: 6px; padding: 40px 44px; width: 100%; max-width: 420px; box-shadow: 0 24px 80px rgba(0,0,0,0.6); }
+  .login-logo { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .login-title { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; margin-bottom: 6px; }
+  .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .api-note { background: #fff8f0; border: 1px solid #e8d8c4; border-radius: 4px; padding: 10px 12px; font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+  .api-note strong { color: var(--ink); }
+  .login-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 5px; }
+  .login-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Barlow', sans-serif; font-size: 14px; background: white; margin-bottom: 14px; transition: border-color 0.15s; }
+  .login-input:focus { outline: none; border-color: var(--accent2); }
+  .login-btn { width: 100%; padding: 12px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .login-btn:hover { background: #a83508; }
+  .login-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .login-error { background: #fde8e4; border: 1px solid #f5c6bc; border-radius: 4px; padding: 10px 12px; font-size: 12px; color: #6a2010; margin-top: 12px; display: none; line-height: 1.5; }
+  .login-privacy { font-size: 11px; color: var(--muted); text-align: center; margin-top: 14px; line-height: 1.5; }
+
+  /* ── APP ── */
+  #app { display: none; flex-direction: column; height: 100vh; }
+  header { background: var(--ink); color: var(--paper); padding: 13px 20px; padding-top: max(13px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px; border-bottom: 3px solid var(--accent); flex-shrink: 0; }
+  header h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+  header .sub { font-family: 'DM Mono', monospace; font-size: 10px; color: #999; letter-spacing: 0.06em; }
+  .user-pill { margin-left: auto; display: flex; align-items: center; gap: 7px; font-family: 'DM Mono', monospace; font-size: 10px; color: #7ddb8f; background: #1a4a25; padding: 4px 10px; border-radius: 20px; flex-shrink: 0; }
+  .user-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: #7ddb8f; box-shadow: 0 0 5px #7ddb8f88; }
+  .logout-btn { background: none; border: 1px solid #444; color: #999; font-family: 'DM Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+  .logout-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .main { display: grid; grid-template-columns: 340px 1fr; flex: 1; overflow: hidden; }
+
+  /* ── SIDEBAR ── */
+  .sidebar { background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .tab-bar { display: flex; border-bottom: 2px solid var(--border); flex-shrink: 0; }
+  .tab { flex: 1; padding: 9px 4px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+  .tab.active { color: var(--ink); border-bottom-color: var(--accent); background: var(--paper); }
+  .tab:hover:not(.active) { background: #f8f4ee; }
+  .tab-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .tab-panel.active { display: flex; }
+
+  /* Waypoints */
+  .waypoints-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .waypoint-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #f0ebe3; cursor: pointer; transition: background 0.1s; }
+  .waypoint-item:hover { background: #faf7f2; }
+  .waypoint-item.selected { background: #fff3ed; border-left: 3px solid var(--accent); padding-left: 11px; }
+  .wp-badge { width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 500; flex-shrink: 0; margin-top: 1px; }
+  .wp-badge.start  { background: var(--ink);    color: var(--paper); font-size: 8px; }
+  .wp-badge.finish { background: var(--accent);  color: white; font-size: 8px; }
+  .wp-badge.gate   { background: var(--accent2); color: white; }
+  .wp-badge.refuge { background: var(--green);   color: white; font-size: 11px; }
+  .wp-badge.ferry  { background: #6b4a1a;        color: white; font-size: 11px; }
+  .wp-badge.waypoint { background: #aaa; color: white; font-size: 14px; }
+  .wp-info { flex: 1; min-width: 0; }
+  .wp-name { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wp-meta { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .wp-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 3px; }
+  .wp-tag { font-size: 9px; font-family: 'DM Mono', monospace; padding: 1px 5px; border-radius: 2px; }
+  .wp-tag.banned    { background: #fde8e4; color: #8a2010; }
+  .wp-tag.permitted { background: #e4f5e8; color: #1a4a25; }
+  .wp-tag.warning   { background: #fdf3d8; color: #6b4a0a; }
+
+  /* Routes */
+  .routes-panel { flex: 1; overflow-y: auto; padding: 12px; }
+  .search-box { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Barlow', sans-serif; font-size: 13px; margin-bottom: 10px; background: var(--paper); }
+  .search-box:focus { outline: none; border-color: var(--accent2); }
+  .route-card { border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; background: white; }
+  .route-card:hover { border-color: var(--accent2); box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .route-card.selected { border-color: var(--accent); background: #fff8f5; }
+  .route-card h4 { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .route-stats { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); display: flex; gap: 10px; margin-bottom: 6px; }
+  .route-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .route-compliance-badge { display: inline-flex; align-items: center; gap: 4px; font-family: 'DM Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 2px; margin-bottom: 6px; }
+  .route-compliance-badge.pass  { background: #e4f5e8; color: #1a4a25; }
+  .route-compliance-badge.fail  { background: #fde8e4; color: #8a2010; }
+  .route-compliance-badge.pending { background: #f0f0f0; color: var(--muted); }
+
+  /* Create */
+  .create-panel { flex: 1; overflow-y: auto; padding: 14px; }
+  .section-label { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .section-label:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+  .leg-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 3px; background: white; cursor: pointer; margin-bottom: 4px; transition: all 0.1s; }
+  .leg-row:hover { border-color: var(--accent2); }
+  .leg-row.on { border-color: var(--accent); background: #fff8f5; }
+  .leg-check { width: 14px; height: 14px; border: 1px solid #ccc; border-radius: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; background: white; }
+  .leg-row.on .leg-check { background: var(--accent); border-color: var(--accent); color: white; }
+  .leg-label { font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .leg-dist { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); flex-shrink: 0; }
+  .input-field { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Barlow', sans-serif; font-size: 13px; margin-bottom: 10px; background: var(--paper); }
+  .input-field:focus { outline: none; border-color: var(--accent2); }
+
+  /* Buttons */
+  .btn-sm { padding: 4px 10px; font-size: 11px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid var(--border); background: white; border-radius: 3px; cursor: pointer; transition: all 0.15s; text-decoration: none; color: var(--ink); display: inline-block; }
+  .btn-sm:hover { border-color: var(--accent2); color: var(--accent2); background: #f0f8ff; }
+  .btn-sm.primary { background: var(--accent2); color: white; border-color: var(--accent2); }
+  .btn-sm.primary:hover { background: #154d77; }
+  .btn-sm.danger { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-sm.danger:hover { background: #a83508; }
+  .btn-full { width: 100%; padding: 10px; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: none; border-radius: 4px; cursor: pointer; transition: all 0.15s; background: var(--accent); color: white; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-full:hover { background: #a83508; }
+  .btn-full.blue { background: var(--accent2); }
+  .btn-full.blue:hover { background: #154d77; }
+  .btn-full:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+  .stats-row { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: white; }
+  .stat-item { flex: 1; padding: 8px 10px; border-right: 1px solid var(--border); text-align: center; }
+  .stat-item:last-child { border-right: none; }
+  .stat-val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; display: block; }
+  .stat-lbl { font-family: 'Barlow Condensed', sans-serif; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .detail-bar { background: var(--ink); color: var(--paper); padding: 9px 16px; display: flex; align-items: center; gap: 10px; min-height: 42px; flex-shrink: 0; }
+  .detail-bar h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-family: 'DM Mono', monospace; font-size: 9px; padding: 2px 7px; border-radius: 2px; background: #333; letter-spacing: 0.05em; flex-shrink: 0; }
+  .badge.red   { background: #6a2010; color: #ffaa99; }
+  .badge.green { background: #1a4a25; color: #7ddb8f; }
+  .badge.blue  { background: #0d3655; color: #7db8e8; }
+  .badge.amber { background: #4a3010; color: #f5c842; }
+
+  /* ── WEATHER BAR ── */
+  #weatherBar { display: none; background: #1a2a3a; border-bottom: 1px solid #243444; padding: 8px 16px; flex-shrink: 0; }
+  .wx-days { display: flex; gap: 8px; }
+  .wx-day { flex: 1; background: rgba(255,255,255,0.06); border-radius: 4px; padding: 7px 10px; min-width: 0; }
+  .wx-date { font-family: 'DM Mono', monospace; font-size: 9px; color: #7a9bb5; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+  .wx-icon { font-size: 18px; margin-bottom: 3px; }
+  .wx-temp { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: #e8f0f8; }
+  .wx-temp span { font-weight: 400; color: #7a9bb5; font-size: 11px; }
+  .wx-wind { font-family: 'DM Mono', monospace; font-size: 9px; color: #9ab5cc; margin-top: 3px; }
+  .wx-precip { font-family: 'DM Mono', monospace; font-size: 9px; color: #7ab5cc; margin-top: 1px; }
+  .wx-loading { font-family: 'DM Mono', monospace; font-size: 10px; color: #7a9bb5; padding: 6px 0; }
+
+  /* Map + compliance split layout */
+  .right-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .map-area { position: relative; background: #e8e3db; overflow: hidden; }
+  .map-area.full { flex: 1; }
+  .map-area.split { height: 55%; flex-shrink: 0; }
+  .map-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px; text-align: center; color: var(--muted); }
+  .map-placeholder .icon { font-size: 52px; opacity: 0.3; }
+  .map-placeholder h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink); opacity: 0.4; }
+  .map-placeholder p { font-size: 13px; line-height: 1.7; max-width: 360px; opacity: 0.65; }
+  #embedFrame { width: 100%; height: 100%; border: none; display: none; }
+
+  #officialMapFrame { position:absolute; inset:0; width:100%; height:100%; border:none; display:none; z-index:450; }
+
+  /* POI Layer */
+  .poi-btn { font-family:'DM Mono',monospace; font-size:10px; padding:3px 9px; border-radius:3px; cursor:pointer; transition:all .15s; flex-shrink:0; border:1px solid #555; color:#bbb; background:none; white-space:nowrap; margin-left:4px; }
+  .poi-btn:hover { border-color:#4caf50; color:#4caf50; }
+  .poi-btn.active { background:#2a7a3b; border-color:#2a7a3b; color:white; }
+  .poi-btn.loading { background:#333; border-color:#555; color:#888; cursor:wait; }
+  .poi-marker-camp  { background:#2a7a3b; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-marker-water { background:#1a5c8a; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-marker-toilet{ background:#b8860b; border:2px solid white; border-radius:50%; width:10px!important; height:10px!important; margin:-5px 0 0 -5px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-popup h4 { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; margin-bottom:3px; }
+  .poi-popup .type { font-size:10px; font-family:'DM Mono',monospace; opacity:0.7; margin-bottom:4px; }
+  .poi-popup a { font-size:11px; color:var(--accent2); }
+  #kmlToggleBtn {
+    position: absolute; top: 10px; right: 10px; z-index: 470;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 5px 12px; border-radius: 4px; border: none;
+    background: rgba(15,15,15,0.78); color: white;
+    cursor: pointer; backdrop-filter: blur(3px);
+    transition: background .15s; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  #kmlToggleBtn:hover { background: rgba(232,133,10,0.9); }
+  #kmlToggleBtn.active { background: rgba(232,133,10,0.95); }
+  #poiBtn {
+    position: absolute; top: 48px; right: 10px; z-index: 470;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 5px 12px; border-radius: 4px; border: 1px solid #555;
+    background: rgba(15,15,15,0.78); color: #bbb;
+    cursor: pointer; backdrop-filter: blur(3px);
+    transition: all .15s; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  #poiBtn:hover { border-color: #4caf50; color: #4caf50; }
+  #poiBtn.active { background: rgba(42,122,59,0.9); border-color: #4caf50; color: white; }
+  #poiBtn.loading { background: rgba(15,15,15,0.78); color: #666; cursor: wait; }
+
+
+  /* ── COMPLIANCE PANEL ── */
+  .compliance-panel {
+    flex: 1;
+    overflow-y: auto;
+    background: white;
+    border-top: 2px solid var(--border);
+    display: none;
+  }
+  .compliance-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--paper);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .compliance-header h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex: 1;
+  }
+  .compliance-summary {
+    display: flex;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: white;
+    flex-shrink: 0;
+  }
+  .summary-stat {
+    text-align: center;
+    flex: 1;
+  }
+  .summary-stat .num {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+    display: block;
+  }
+  .summary-stat .num.red { color: var(--accent); }
+  .summary-stat .num.green { color: var(--green); }
+  .summary-stat .num.amber { color: var(--warn); }
+  .summary-stat .lbl {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .violation-list { padding: 8px 0; }
+  .violation-item {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f5f0ea;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .violation-item:last-child { border-bottom: none; }
+  .violation-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .violation-body { flex: 1; min-width: 0; }
+  .violation-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .violation-name.warn { color: var(--warn); }
+  .violation-name.ok { color: var(--green); }
+  .violation-detail { font-size: 11px; color: #555; line-height: 1.5; }
+  .violation-coords { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .violation-actions { margin-top: 6px; display: flex; gap: 6px; }
+
+  .all-clear {
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--green);
+  }
+  .all-clear .big { font-size: 40px; margin-bottom: 10px; }
+  .all-clear h4 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .all-clear p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  .gate-check-section { padding: 10px 16px; border-bottom: 1px solid #f5f0ea; }
+  .gate-check-section h4 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .gate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+  .gate-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: 'Barlow', sans-serif;
+  }
+  .gate-pill.hit  { background: #e4f5e8; color: #1a4a25; }
+  .gate-pill.miss { background: #f5f0e8; color: var(--muted); }
+  .gate-pill .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .gate-pill.hit  .dot { background: var(--green); }
+  .gate-pill.miss .dot { background: var(--border); }
+
+  /* Misc */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; opacity: 0.5; }
+  .loading-row { display: flex; align-items: center; padding: 20px; color: var(--muted); font-size: 12px; font-family: 'DM Mono', monospace; }
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid #ddd; border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; flex-shrink: 0; }
+  .spinner.w { border-color: rgba(255,255,255,0.25); border-top-color: white; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 4px; font-size: 11px; font-family: 'DM Mono', monospace; z-index: 9998; max-width: 320px; line-height: 1.5; transform: translateY(80px); opacity: 0; transition: all 0.3s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 3px solid #4caf50; }
+  .toast.error   { border-left: 3px solid var(--accent); }
+  .toast.info    { border-left: 3px solid var(--accent2); }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+
+<style>
+  #leafletMap { width:100%; height:100%; }
+  #map { width:100%; height:100%; }
+  .btn-full.green { background: var(--green); }
+  .btn-full.green:hover { background: #1e5c2a; }
+  .leg-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .leg-vias { padding: 4px 8px 6px 30px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .via-item { display: flex; align-items: center; gap: 4px; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); background: white; transition: all 0.1s; user-select: none; }
+  .via-item:hover { border-color: var(--accent2); color: var(--ink); }
+  .via-item.on { background: #eef4fb; border-color: var(--accent2); color: var(--accent2); }
+  .via-item .via-check { font-size: 9px; }
+  #routingOverlay { position:absolute;inset:0;background:rgba(15,15,15,0.82);z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px; }
+  #routingOverlay.active { display:flex; }
+  .routing-title { font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--paper); }
+  .progress-bar-wrap { width:260px;height:4px;background:#333;border-radius:2px;overflow:hidden; }
+  .progress-bar-fill { height:100%;background:var(--accent);border-radius:2px;transition:width .3s ease;width:0%; }
+  .routing-step { font-family:'DM Mono',monospace;font-size:10px;color:#666;max-width:300px;text-align:center; }
+  .marker-wp { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;color:white;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.6);cursor:pointer; }
+  .marker-wp.start{background:#0f0f0f;font-size:8px}.marker-wp.finish{background:#c8410a;font-size:8px}
+  .marker-wp.gate{background:#1a5c8a}.marker-wp.refuge{background:#2a7a3b;font-size:13px}.marker-wp.ferry{background:#6b4a1a;font-size:13px}
+
+  .leaflet-violation-icon { background:var(--accent); border:2px solid white; border-radius:50%; width:14px!important; height:14px!important; margin:-7px 0 0 -7px!important; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
+  .leaflet-gate-hit-icon { background:var(--green); border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; }
+  .leaflet-gate-miss-icon { background:#ccc; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; }
+  .leaflet-start-icon { background:var(--ink); border:2px solid white; border-radius:50%; width:16px!important; height:16px!important; margin:-8px 0 0 -8px!important; }
+  .leaflet-finish-icon { background:var(--accent); border:2px solid white; border-radius:3px; width:14px!important; height:14px!important; margin:-7px 0 0 -7px!important; }
+  .violation-popup h4 { font-family:"Barlow Condensed",sans-serif; font-size:13px; font-weight:700; color:var(--accent); margin-bottom:4px; }
+  .violation-popup p { font-size:11px; line-height:1.5; color:#444; }
+  .violation-popup a { font-size:11px; color:var(--accent2); }
+
+  /* ── USER PINS ── */
+  .leaflet-user-pin-icon { background:#7c3aed; border:2px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); width:16px!important; height:16px!important; margin:-14px 0 0 -8px!important; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  #addPinBtn {
+    position: absolute; top: 124px; right: 10px; z-index: 470;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 5px 12px; border-radius: 4px; border: 1px solid #555;
+    background: rgba(15,15,15,0.78); color: #bbb;
+    cursor: pointer; backdrop-filter: blur(3px);
+    transition: all .15s; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  #addPinBtn:hover { border-color: #9b6ef5; color: #c4a8ff; }
+  #addPinBtn.active { background: rgba(124,58,237,0.9); border-color: #9b6ef5; color: white; }
+  .map-area.pin-mode { cursor: crosshair !important; }
+  .map-area.pin-mode * { cursor: crosshair !important; }
+  .pin-popup-form { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+  .pin-popup-form input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px; font-family: 'Barlow', sans-serif; width: 100%; }
+  .pin-popup-form textarea { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; font-family: 'Barlow', sans-serif; width: 100%; resize: vertical; min-height: 48px; }
+  .pin-popup-form .pin-save-btn { padding: 5px 12px; background: #7c3aed; color: white; border: none; border-radius: 3px; font-size: 12px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+  .pin-popup-form .pin-save-btn:hover { background: #6d28d9; }
+  /* Pins sidebar list */
+  .pin-list-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #f0ebe3; }
+  .pin-list-icon { width: 22px; height: 22px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 10px; color: white; margin-top: 1px; }
+  .pin-list-info { flex: 1; min-width: 0; }
+  .pin-list-name { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; line-height: 1.2; }
+  .pin-list-meta { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .pin-list-note { font-size: 11px; color: #555; margin-top: 2px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pin-del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 3px; flex-shrink: 0; transition: color 0.15s; }
+  .pin-del-btn:hover { color: var(--accent); }
+  .pin-empty { text-align: center; padding: 32px 20px; color: var(--muted); }
+  .pin-empty .icon { font-size: 32px; opacity: 0.4; margin-bottom: 8px; }
+  .pin-empty p { font-size: 12px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">VIA Chapter III — Ultima Thule</div>
+    <div class="login-title">Route Planner</div>
+    <p class="login-sub">Sign in with your RideWithGPS account to inspect routes for compliance with the race compendium.</p>
+    <label class="login-label" for="loginApiKey">RideWithGPS API Key</label>
+    <input class="login-input" type="text" id="loginApiKey" placeholder="e.g. a1b2c3d4" autocomplete="off" spellcheck="false">
+    <label class="login-label" for="loginEmail">Email</label>
+    <input class="login-input" type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+    <label class="login-label" for="loginPass">Password (optional if using auth token)</label>
+    <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    <label class="login-label" for="loginToken">Auth token (optional)</label>
+    <input class="login-input" type="text" id="loginToken" placeholder="Paste RideWithGPS auth_token" autocomplete="off" spellcheck="false">
+    <div class="api-note" style="margin-top:-4px;margin-bottom:14px"><strong>Manual token mode:</strong> if a valid auth_token is pasted, the app will open immediately and test RWGPS sync by loading your routes. This avoids brittle browser-side token validation.</div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">
+      <span id="loginBtnText">Sign in to RideWithGPS</span>
+    </button>
+    <div class="login-error" id="loginError"></div>
+    <p class="login-privacy">🔒 Use either password login or paste a valid RideWithGPS auth_token. API key, email &amp; auth_token are saved to localStorage. Password is never stored.</p>
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <p style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px">Using Komoot, Garmin, Wahoo or another tool?</p>
+      <button onclick="enterGuestMode()" style="width:100%;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:white;color:var(--ink);border:2px solid var(--border);border-radius:4px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink)'">
+        📂 Upload GPX — No login needed
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <h1>VIA Chapter III — Ultima Thule</h1>
+    <span class="sub">Route Compliance Inspector</span>
+    <div class="user-pill"><div class="dot"></div><span id="userLabel">connected</span></div>
+    <button class="logout-btn" onclick="logout()">Sign out</button>
+  </header>
+
+  <div class="main">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="tab-bar">
+        <button class="tab active" id="tab-btn-routes" onclick="switchTab('routes')">🚴 My Routes</button>
+        <button class="tab" id="tab-btn-gpx" onclick="switchTab('gpx')" style="display:none">📂 Upload GPX</button>
+        <button class="tab" onclick="switchTab('waypoints')">📍 Gates</button>
+        <button class="tab" id="tab-btn-pins" onclick="switchTab('pins')">📌 Pins</button>
+        <button class="tab" onclick="switchTab('create')">✚ Create</button>
+      </div>
+
+      <!-- ROUTES TAB — now the primary tab -->
+      <div class="tab-panel active" id="tab-routes">
+        <div class="routes-panel">
+          <input class="search-box" type="text" id="routeSearch" placeholder="Search your routes..." oninput="filterRoutes()">
+          <div id="routesList"><div class="loading-row"><span class="spinner"></span>Loading routes...</div></div>
+        </div>
+      </div>
+
+      <!-- GPX UPLOAD TAB (guest mode) -->
+      <div class="tab-panel" id="tab-gpx">
+        <div class="routes-panel" style="padding:16px">
+          <div class="section-label">Upload your GPX route</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px">Export your route from Komoot, Garmin, Wahoo, or any other tool as a GPX file and upload it here for a full compliance check.</p>
+          <label style="display:block;border:2px dashed var(--border);border-radius:6px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.15s;background:white" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:28px;margin-bottom:8px">📂</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--ink)">Choose GPX file</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">.gpx files from any routing tool</div>
+            <input type="file" accept=".gpx" style="display:none" onchange="loadGPXFile(event, 'Uploaded Route')">
+          </label>
+        </div>
+      </div>
+
+      <!-- WAYPOINTS TAB -->
+      <div class="tab-panel" id="tab-waypoints">
+        <div class="waypoints-list" id="waypointsList"></div>
+      </div>
+
+      <!-- PINS TAB -->
+      <div class="tab-panel" id="tab-pins">
+        <div style="padding:10px 14px 6px;border-bottom:1px solid var(--border);flex-shrink:0">
+          <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:8px">Click <strong>📌 Add Pin</strong> on the map to drop a personal waypoint. Pins are saved to your browser and persist between sessions.</p>
+          <button onclick="clearAllPins()" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);border-radius:3px;background:white;color:var(--muted);cursor:pointer;transition:all 0.15s" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Clear all pins</button>
+        </div>
+        <div class="waypoints-list" id="pinsList"></div>
+      </div>
+
+      <!-- CREATE TAB -->
+      <div class="tab-panel" id="tab-create">
+        <div class="create-panel">
+          <div class="section-label">Route Name</div>
+          <input class="input-field" type="text" id="newRouteName" value="VIA Chapter III — Ultima Thule">
+          <div class="section-label">Select Legs</div>
+          <div id="legSelector"></div>
+          <div class="section-label">Export</div>
+          <div class="section-label" style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">Road Routing</div>
+          <button class="btn-full green" id="previewBtn" onclick="previewRoute()">🗺 Preview on Road Network</button>
+          <div class="section-label" style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">Export</div>
+          <button class="btn-full" id="createBtn" onclick="createRoute()">✚ Push to RideWithGPS</button>
+          <button class="btn-full blue" onclick="downloadGPX()">⬇ Download GPX (Road-Routed)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="stats-row">
+        <div class="stat-item"><span class="stat-val" id="statTotal">~4,000</span><span class="stat-lbl">km total</span></div>
+        <div class="stat-item"><span class="stat-val">~40k</span><span class="stat-lbl">m climbing</span></div>
+        <div class="stat-item"><span class="stat-val">16</span><span class="stat-lbl">gates</span></div>
+        <div class="stat-item"><span class="stat-val">17</span><span class="stat-lbl">banned tunnels</span></div>
+        <div class="stat-item"><span class="stat-val">8+</span><span class="stat-lbl">key ferries</span></div>
+      </div>
+
+      <div class="detail-bar" id="detailBar">
+        <h2 id="detailTitle">Select a route to inspect</h2>
+      </div>
+
+      <div id="gatePhotoBar" style="display:none;height:140px;flex-shrink:0;overflow:hidden;position:relative;background:#111">
+        <img id="gatePhotoImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;opacity:0.85"
+             onerror="document.getElementById('gatePhotoBar').style.display='none'">
+        <div id="gatePhotoCredit" style="position:absolute;bottom:0;left:0;right:0;padding:4px 10px;background:linear-gradient(transparent,rgba(0,0,0,0.6));font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,0.6)"></div>
+      </div>
+      <div id="weatherBar"><div class="wx-loading"><span class="spinner" style="width:10px;height:10px;margin-right:6px;border-width:1.5px"></span>Loading forecast...</div></div>
+
+      <div class="right-content" id="rightContent">
+        <!-- Map + compliance panel rendered here dynamically -->
+        <div class="map-area full" id="mapAreaWrap">
+          <div class="map-placeholder" id="mapPlaceholder">
+            <div class="icon">🗺️</div>
+            <h3>Route Compliance Inspector</h3>
+            <p>Select any route from <strong>My Routes</strong> to embed the interactive RideWithGPS map and run a full compliance check against:<br><br>
+            ⛔ 15 banned tunnels &nbsp;·&nbsp; 5 banned road sections &nbsp;·&nbsp; 20+ banned ferries<br><br>
+            ✅ 16 mandatory gate proximity checks</p>
+          </div>
+          <div id="map" style="width:100%;height:100%"></div>
+          <button id="kmlToggleBtn" onclick="toggleOfficialMap()">🗺 Official Map</button>
+          <button id="poiBtn" onclick="togglePOI()">⛺ Camps · 💧 Water · 🚽 Toilets</button>
+          <button id="poiRefreshBtn" onclick="refreshPOI()" style="position: absolute; top: 86px; right: 10px; z-index: 470; font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 12px; border-radius: 4px; border: 1px solid #555; background: rgba(15,15,15,0.78); color: #bbb; cursor: pointer; backdrop-filter: blur(3px); transition: all .15s; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.35); display:none;">↻ Refresh POIs</button>
+          <button id="addPinBtn" onclick="togglePinMode()">📌 Add Pin</button>
+          <div id="poiLoadingBadge" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:470;background:rgba(15,15,15,0.82);color:#7db8e8;font-family:'DM Mono',monospace;font-size:11px;padding:5px 14px;border-radius:20px;backdrop-filter:blur(4px);white-space:nowrap;pointer-events:none">
+            <span class="spinner" style="width:9px;height:9px;border-width:1.5px;border-color:rgba(255,255,255,0.2);border-top-color:#7db8e8;margin-right:6px;vertical-align:middle"></span>Loading POIs...
+          </div>
+          <iframe id="officialMapFrame" src="" allowfullscreen></iframe>
+          <div id="routingOverlay">
+            <div class="routing-title">Computing Road Route</div>
+            <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+            <div class="routing-step" id="routingStep">Preparing segments...</div>
+          </div>
+        </div>
+        <div class="compliance-panel" id="compliancePanel"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+let API_KEY = '';
+const BASE      = 'https://ridewithgps.com';
+const TOKEN_KEY  = 'rwgps_via_token';
+const APIKEY_KEY = 'rwgps_via_apikey';
+const EMAIL_KEY = 'rwgps_via_email';
+
+// ── BANNED LOCATIONS FROM KML ─────────────────────────────────
+// Each has lat, lng, name, type (tunnel|road|ferry), description
+// Detection radius in metres
+const BANNED = [
+  // Tunnels (points — 300m detection radius)
+  {name:'Laerdalstunnelen',         lat:60.9768, lng:7.3851,  r:300, type:'tunnel', note:'World\'s longest road tunnel. Use Rv50 Filefjell mountain road instead.'},
+  {name:'Gudvangatunnelen',         lat:60.8859, lng:6.9394,  r:300, type:'tunnel', note:'Near Flåm/Borgund. Use Stalheimskleiva old road over the mountain instead.'},
+  {name:'Innfjordtunnelen',         lat:62.5302, lng:7.6128,  r:300, type:'tunnel', note:'Near Åndalsnes/Trollstigen. Approach Trollstigen on Rv63 from the north, do not use this tunnel.'},
+  {name:'Hellesylt tunnel (↑ only)',lat:62.1150, lng:6.9037,  r:300, type:'tunnel', note:'SOUTHBOUND only is permitted. NORTHBOUND (south→north) is banned. Do not use northbound.'},
+  {name:'Flenjatunnelen',           lat:60.8830, lng:7.0978,  r:300, type:'tunnel', note:'Near Borgund/Lærdal corridor. Use overground roads.'},
+  {name:'Eiksund tunnel',           lat:62.2195, lng:5.9066,  r:300, type:'tunnel', note:'Near Volda/Ørsta. Use Lote–Anda, Festøya, or Lauvstad–Volda ferries to bypass.'},
+  {name:'Rotsethorntunnelen',       lat:62.1315, lng:6.0949,  r:300, type:'tunnel', note:'Near Volda. Use permitted ferries to bypass the E39 tunnel cluster.'},
+  {name:'Hjartåbergtunnelen',       lat:62.1008, lng:6.1894,  r:300, type:'tunnel', note:'Near Volda. Part of banned E39 cluster near finish. Use ferry chain instead.'},
+  {name:'Oppljostunnelen',          lat:61.9964, lng:7.3239,  r:300, type:'tunnel', note:'Near Strynefjellsveg. Use Gamle Strynefjellsveg old mountain road instead.'},
+  {name:'Kvivstunnelen',            lat:61.9984, lng:6.4964,  r:300, type:'tunnel', note:'Near Strynefjellsveg/Gaularfjellet. Use old road over the mountain.'},
+  {name:'Fodnestunnelen',           lat:61.1410, lng:7.4370,  r:300, type:'tunnel', note:'Near Urnes Stave Church return. Use overground road via Gaupne after Solvorn ferry.'},
+  {name:'Amlatunnelen',             lat:61.1732, lng:7.3189,  r:300, type:'tunnel', note:'Near Urnes/Solvorn. Use overground roads north from Solvorn ferry.'},
+  {name:'Morkaaastunnelen',         lat:62.1767, lng:6.0445,  r:300, type:'tunnel', note:'Near Volda. Use permitted ferry chain to bypass.'},
+  {name:'Selvågtunnelen',           lat:62.2598, lng:5.8558,  r:300, type:'tunnel', note:'Near Ørsta/Volda. Use permitted ferries (Lote–Anda → Festøya → Lauvstad–Volda).'},
+  {name:'Tunnel near Dovre',        lat:61.9875, lng:9.2434,  r:300, type:'tunnel', note:'Near Dombås/Dovre. Use Rv15 or alternative valley roads.'},
+  {name:'Oslofjordtunnelen',         lat:59.4530, lng:10.5540, r:400, type:'tunnel', note:"7,306m underwater tunnel — closed to cyclists, Norway's most accident-prone. Use Rv23 via Oslo or Moss–Horten ferry."},
+  {name:'Grasdaltunnelen',            lat:62.0891, lng:7.1506,  r:300, type:'tunnel', note:'On Rv15 between Stryn and Rv63 toward Geiranger. Bike-banned. Use Rv258/old surface bypass road above the tunnel to reach Rv63 legally.'},
+
+  // Banned road sections (points near midpoint — 500m detection radius)
+  {name:'E39 Vassenden–Skei',       lat:61.5200, lng:6.2900,  r:500, type:'road',   note:'Banned road section. Use Fv13 through the Gaularfjellet corridor instead.'},
+  {name:'E39 Sandane section',      lat:61.7900, lng:6.1800,  r:500, type:'road',   note:'Banned road section near Sandane. Use alternative Fv60/Fv615 routes.'},
+  {name:'E6 Sel–Dombås section',    lat:61.9000, lng:9.3800,  r:500, type:'road',   note:'Banned E6 section between Sel and Dombås. Use Rv15 via Otta or Rv27 instead.'},
+  {name:'E39 Ørstavegen (Volda)',   lat:62.1480, lng:6.0580,  r:400, type:'road',   note:'Banned E39 section immediately near Volda. Use Lauvstad–Volda ferry to arrive directly.'},
+  {name:'E39 Voldavegen section',   lat:62.1761, lng:6.0544,  r:400, type:'road',   note:'Banned road section near Volda finish. Arrive via permitted ferry chain.'},
+  {name:'E39 from Festøya',         lat:62.3630, lng:6.2700,  r:400, type:'road',   note:'Banned E39 section between Festøya and Volda. Use Festøya ferry then Lauvstad–Volda ferry.'},
+
+  // Banned ferries (points — 400m detection radius)
+  {name:'Hirtshals ferries (BANNED)',       lat:57.6714, lng:9.8415,  r:400, type:'ferry', note:'All ferries to/from Hirtshals are banned. Use Helsingør–Helsingborg instead.'},
+  {name:'Göteborg ferries (BANNED)',        lat:57.5973, lng:11.6170, r:400, type:'ferry', note:'All ferries to/from Göteborg are banned.'},
+  {name:'Trelleborg ferries (BANNED)',      lat:55.3124, lng:13.1476, r:400, type:'ferry', note:'All ferries to/from Trelleborg are banned.'},
+  {name:'Malmö ferries (BANNED)',           lat:55.6138, lng:12.8987, r:400, type:'ferry', note:'All ferries to/from Malmö are banned.'},
+  {name:'Ystad ferries (BANNED)',           lat:55.3678, lng:13.8583, r:400, type:'ferry', note:'All ferries to/from Ystad are banned.'},
+  {name:'Oslo ferries (BANNED)',            lat:58.9520, lng:10.4963, r:400, type:'ferry', note:'All ferries to/from Oslo are banned.'},
+  {name:'Kiel ferries (BANNED)',            lat:54.4257, lng:10.2140, r:400, type:'ferry', note:'All ferries to/from Kiel are banned.'},
+  {name:'Geiranger–Hellesylt ferry (BANNED)',lat:62.0903,lng:7.0434,  r:400, type:'ferry', note:'Tourist fjord ferry — banned. Use Rv63 road instead.'},
+  {name:'Gudvangen–Undredal ferry (BANNED)',lat:60.8930, lng:6.8604,  r:400, type:'ferry', note:'Banned. Use overground roads.'},
+  {name:'Kaupanger ferry (BANNED)',         lat:61.1787, lng:7.2529,  r:400, type:'ferry', note:'Banned. Use Solvorn–Ornes (permitted) for Urnes church instead.'},
+  {name:'Bergen fast boat (BANNED)',        lat:60.3960, lng:5.3203,  r:400, type:'ferry', note:'Bergen fast boat port is banned.'},
+  {name:'Travemünde ferries (BANNED)',      lat:53.9666, lng:10.9025, r:400, type:'ferry', note:'All Travemünde ferries are banned.'},
+  {name:'Strömstad–Sandefjord (BANNED)',    lat:58.9611, lng:11.0426, r:400, type:'ferry', note:'Banned. Use Svinesund bridge cycle path instead.'},
+  {name:'Öresundsbron bridge (BANNED)',     lat:55.5834, lng:12.7921, r:400, type:'ferry', note:'The Øresund Bridge is banned for cyclists. Use Helsingør–Helsingborg ferry instead.'},
+  {name:'Storebaeltsbroen (BANNED)',        lat:55.3341, lng:10.9788, r:400, type:'ferry', note:'Great Belt Bridge is banned. Use Puttgarden–Rødby ferry or alternative route.'},
+  {name:'Rostock–Gedser ferry (BANNED)',    lat:54.3014, lng:12.0469, r:400, type:'ferry', note:'Banned. Use Puttgarden–Rødby instead.'},
+  {name:'Nordenham–Bremerhaven (BANNED)',   lat:53.5295, lng:8.5631,  r:400, type:'ferry', note:'Banned.'},
+];
+
+// ── MANDATORY GATES (for coverage check) ─────────────────────
+const GATES = [
+  {id:'start',  name:'Start — De Proloog',        lat:52.00384, lng:5.46146,  r:500},
+  {id:'g1',     name:'Gate I — Brocken',          lat:51.79895, lng:10.61544, r:400},
+  {id:'g2',     name:'Gate II — Fredriksten',     lat:59.11994, lng:11.39534, r:400},
+  {id:'g3',     name:'Gate III — Suleskard',      lat:59.04283, lng:7.14565,  r:400},
+  {id:'g4',     name:'Gate IV — Lysebotn',        lat:59.05483, lng:6.64508,  r:400},
+  {id:'g5',     name:'Gate V — Vøringsfossen',    lat:60.42783, lng:7.2533,   r:400},
+  {id:'g6',     name:'Gate VI — Sognefjellet',    lat:61.55272, lng:7.93937,  r:500},
+  {id:'g7',     name:'Gate VII — Gaularfjellet',  lat:61.35147, lng:6.5184,   r:500},
+  {id:'g8',     name:'Gate VIII — Strynefjellsveg',lat:61.95081,lng:7.3298,   r:500},
+  {id:'g9',     name:'Gate IX — Borgund',         lat:61.04738, lng:7.81278,  r:400},
+  {id:'g10',    name:'Gate X — Urnes',            lat:61.29813, lng:7.32198,  r:400},
+  {id:'g11',    name:'Gate XI — Lom',             lat:61.83953, lng:8.56631,  r:400},
+  {id:'g12',    name:'Gate XII — Svøufallet',     lat:62.50932, lng:9.06695,  r:500},
+  {id:'g13',    name:'Gate XIII — Trollstigen',   lat:62.4546,  lng:7.66918,  r:500},
+  {id:'g14',    name:'Gate XIV — Dalsnibba',      lat:62.04885, lng:7.26859,  r:500},
+  {id:'g15',    name:'Gate XV — Atlantic Road',   lat:63.0098,  lng:7.43054,  r:500},
+  {id:'g16',    name:'Gate XVI — Vestkapp',       lat:62.18652, lng:5.12587,  r:500},
+  {id:'finish', name:'Finish — Volda',            lat:62.17109, lng:6.00881,  r:500},
+];
+
+// ── WAYPOINTS (for sidebar) ───────────────────────────────────
+const WPS = [
+  {id:'start', type:'start', seq:'S', name:'De Proloog, Amerongen', lat:52.00384, lng:5.46146, country:'NL', note:'Race starts 07:00 on 24 July 2026. Sign-on 23 July 09:00–17:00.', tags:[]},
+  {id:'g1', type:'gate', seq:'I', name:'Gate I — Brocken (1,141m)', lat:51.79895, lng:10.61544, country:'DE', note:'Approach from Wernigerode via B244. Avoid Brockenbahn rail road.', tags:[]},
+  {id:'f_putt', type:'ferry', seq:'⛴', name:'Puttgarden–Rødby Ferry', lat:54.5009, lng:11.2260, country:'DE→DK', note:'Permitted ✅. ~45 min. Walk-on.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_hels', type:'ferry', seq:'⛴', name:'Helsingør–Helsingborg Ferry', lat:56.0328, lng:12.6167, country:'DK→SE', note:'THE mandatory DK→SE crossing ✅. 20 min, every 20 min. All other DK→SE ferries BANNED.', tags:[{l:'PERMITTED',c:'permitted'},{l:'ONLY VALID DK→SE',c:'warning'}]},
+  {id:'g2', type:'gate', seq:'II', name:'Gate II — Fredriksten Fortress', lat:59.11994, lng:11.39534, country:'NO', note:'Open 24 hours. Avoid fast E18.', tags:[]},
+  {id:'moss_ferry', type:'ferry', seq:'⛴', name:'Moss–Horten Ferry',
+   lat:59.4356, lng:10.6573, country:'NO',
+   note:'Permitted ✅. Crosses the Oslofjord. Avoids the banned Oslofjordtunnelen. Walk-on.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS OSLOFJORDTUNNELEN',c:'permitted'}]},
+  {id:'g3', type:'gate', seq:'III', name:'Gate III — Suleskard (1,050m)', lat:59.04283, lng:7.14565, country:'NO', note:'Approach from east on Rv9/Fv468 — paved.', tags:[], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/suleskard.jpeg'},
+  {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge (TBC — Sirdal corridor)', lat:59.06, lng:6.90, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/fjord-sauna.jpeg'},
+  {id:'g4', type:'gate', seq:'IV', name:'Gate IV — Lysebotn', lat:59.05483, lng:6.64508, country:'NO', note:'BOOK FERRY AHEAD: Lysebotn–Forsand. billetter.kolumbus.no', tags:[{l:'BOOK FERRY AHEAD',c:'warning'}], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/lysebotn.jpeg'},
+  {id:'f_lyse', type:'ferry', seq:'⛴', name:'Lysebotn–Forsand Ferry', lat:59.0547, lng:6.6452, country:'NO', note:'Permitted ✅ — BOOK IN ADVANCE. Sells out in summer.', tags:[{l:'PERMITTED',c:'permitted'},{l:'BOOK IN ADVANCE',c:'warning'}]},
+  {id:'g5', type:'gate', seq:'V', name:'Gate V — Vøringsfossen', lat:60.42783, lng:7.2533, country:'NO', note:'Right beside Rv7 — minimal detour.', tags:[]},
+  {id:'g9', type:'gate', seq:'IX', name:'Gate IX — Borgund Stave Church', lat:61.04738, lng:7.81278, country:'NO', note:'AVOID Laerdalstunnelen (BANNED). Use Rv50 Filefjell.', tags:[{l:'LAERDALSTUNNELEN BANNED',c:'banned'}]},
+  {id:'f_solv', type:'ferry', seq:'⛴', name:'Solvorn–Ornes Ferry', lat:61.3011, lng:7.2468, country:'NO', note:'Permitted ✅ (confirmed KML Oct 2025). For Urnes Stave Church.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'g10', type:'gate', seq:'X', name:'Gate X — Urnes Stave Church', lat:61.29813, lng:7.32198, country:'NO', note:'AVOID Fodnestunnelen and Amlatunnelen (both BANNED).', tags:[{l:'FODNESTUNNELEN BANNED',c:'banned'},{l:'AMLATUNNELEN BANNED',c:'banned'}]},
+  {id:'g11', type:'gate', seq:'XI', name:'Gate XI — Lom Stave Church', lat:61.83953, lng:8.56631, country:'NO', note:'AVOID E6 Sel–Dombås (BANNED road section).', tags:[{l:'E6 SEL–DOMBÅS BANNED',c:'banned'}], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/lom-stave-church.jpeg'},
+  {id:'g6', type:'gate', seq:'VI', name:'Gate VI — Sognefjellet (1,434m)', lat:61.55272, lng:7.93937, country:'NO', note:'Highest gate. Rv55. AVOID Gudvangatunnelen (BANNED).', tags:[{l:'GUDVANGATUNNELEN BANNED',c:'banned'}]},
+  {id:'g7', type:'gate', seq:'VII', name:'Gate VII — Gaularfjellet (784m)', lat:61.35147, lng:6.5184, country:'NO', note:'Use Fv13. AVOID E39 Vassenden–Skei and E39 Sandane (both BANNED).', tags:[{l:'E39 VASSENDEN–SKEI BANNED',c:'banned'},{l:'E39 SANDANE BANNED',c:'banned'}]},
+  {id:'g8', type:'gate', seq:'VIII', name:'Gate VIII — Strynefjellsveg (1,139m)', lat:61.95081, lng:7.3298, country:'NO', note:'Use Gamle Strynefjellsveg. AVOID Kvivstunnelen and Oppljostunnelen (BANNED).', tags:[{l:'KVIVSTUNNELEN BANNED',c:'banned'},{l:'OPPLJOSTUNNELEN BANNED',c:'banned'}]},
+  {id:'g14', type:'gate', seq:'XIV', name:'Gate XIV — Dalsnibba (1,476m)', lat:62.04885, lng:7.26859, country:'NO', note:'Toll road FREE for cyclists. AVOID Hellesylt tunnel NORTHBOUND (BANNED).', tags:[{l:'HELLESYLT TUNNEL ↑ BANNED',c:'banned'}]},
+  {id:'g13', type:'gate', seq:'XIII', name:'Gate XIII — Trollstigen (852m)', lat:62.4546, lng:7.66918, country:'NO', note:'From Åndalsnes (north). AVOID Innfjord tunnel (BANNED).', tags:[{l:'INNFJORD TUNNEL BANNED',c:'banned'}], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/trollstigen.jpeg'},
+  {id:'g12', type:'gate', seq:'XII', name:'Gate XII — Svøufallet', lat:62.50932, lng:9.06695, country:'NO', note:'East detour on Rv70 toward Sunndalsøra — flat valley road.', tags:[]},
+  {id:'g15', type:'gate', seq:'XV', name:'Gate XV — Atlantic Ocean Road', lat:63.0098, lng:7.43054, country:'NO', note:'Flat causeway. Use Molde–Vestnes ferry (permitted ✅).', tags:[{l:'FLAT & FAST',c:'permitted'}]},
+  {id:'g16', type:'gate', seq:'XVI', name:'Gate XVI — Vestkapp (310m)', lat:62.18652, lng:5.12587, country:'NO', note:'Final gate. Use Lote–Anda ferry after.', tags:[], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/vestkapp.jpeg'},
+  {id:'f_lote', type:'ferry', seq:'⛴', name:'Lote–Anda Ferry', lat:61.8544, lng:6.0813, country:'NO', note:'Permitted ✅. Avoids all banned E39+tunnels near Volda.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS BANNED E39+TUNNELS',c:'permitted'}]},
+  {id:'f_fest', type:'ferry', seq:'⛴', name:'Festøya Ferry', lat:62.3749, lng:6.3315, country:'NO', note:'Permitted ✅. ~20 min crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_lauv', type:'ferry', seq:'⛴', name:'Lauvstad–Volda Ferry', lat:62.1646, lng:5.9425, country:'NO', note:'Permitted ✅. Final ferry into Volda.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'finish', type:'finish', seq:'F', name:'FINISH — Volda', lat:62.17109, lng:6.00881, country:'NO', note:'Race finish. Triumphal Celebration 8 August 2026 at 20:00.', tags:[], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/volda-finish.jpeg'},
+];
+
+const LEGS = [
+  {id:'L1', name:'Start → Gate I (Brocken)',              wps:['start','g1'],                              dist:'~480km'},
+  {id:'L2', name:'Brocken → Gate II via Sweden',          wps:['g1','f_putt','f_hels','g2'],               dist:'~620km'},
+  {id:'L3', name:'Gate II → Gate III + Refuge',           wps:['g2','moss_ferry','g3','refuge'],           dist:'~380km'},
+  {id:'L4', name:'Gate IV Lysebotn + Ferry',              wps:['g4','f_lyse'],                             dist:'~60km'},
+  {id:'L5', name:'Gates V, IX, X, XI (Stave churches)',   wps:['g5','g9','f_solv','g10','g11'],            dist:'~420km'},
+  {id:'L6', name:'Gates VI–VIII (Sognefjellet loop)',     wps:['g6','g7','g8'],                            dist:'~280km'},
+  {id:'L7', name:'Gates XII–XIV (Dalsnibba+Trollstigen)', wps:['g14','g13','g12'],                         dist:'~310km'},
+  {id:'L8', name:'Gate XV — Atlantic Ocean Road',         wps:['g15'],                                     dist:'~80km'},
+  {id:'L9', name:'Gate XVI → Finish via ferries',         wps:['g16','f_lote','f_fest','f_lauv','finish'], dist:'~120km'},
+];
+
+// ── STATE ─────────────────────────────────────────────────────
+const OSRM_BASE = 'https://router.project-osrm.org/route/v1/cycling';
+const LEG_COLORS = ['#c8410a','#1a5c8a','#2a7a3b','#7b3fa0','#b8860b','#c8410a','#1a5c8a','#2a7a3b','#7b3fa0'];
+
+let authToken = null, userId = null, userEmail = null;
+let allRoutes = [], selWp = null, selRoute = null;
+let selLegs = new Set(LEGS.map(l => l.id));
+const wpMap = Object.fromEntries(WPS.map(w => [w.id, w]));
+const GATE_TYPES = new Set(['gate', 'start', 'finish']);
+// All non-gate via waypoints pinned by default
+const pinnedViaWps = new Set(
+  LEGS.flatMap(l => l.wps).filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type))
+);
+let routedTrackPoints = null;
+let savedRouteSegments = [];
+let poiLayerGroup = null;
+let wpMarkerGroup = null;
+
+// ── HAVERSINE DISTANCE (metres) ───────────────────────────────
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+
+// ── COMPLIANCE CHECK ──────────────────────────────────────────
+function inspectRoute(trackPoints) {
+  // trackPoints: array of {lat, lng} or [lat, lng]
+  const pts = trackPoints.map(p => Array.isArray(p) ? {lat:p[0], lng:p[1]} : p);
+  if (!pts.length) return {violations:[], warnings:[], gateHits:[], gatesMissed:[]};
+
+  const violations = [];
+  const warnings   = [];
+
+  // Check each banned location against all track points
+  for (const banned of BANNED) {
+    let minDist = Infinity;
+    let closestPt = null;
+    // Sample every 5th point for performance, then check neighbours on hit
+    for (let i = 0; i < pts.length; i += 3) {
+      const d = haversine(pts[i].lat, pts[i].lng, banned.lat, banned.lng);
+      if (d < minDist) { minDist = d; closestPt = pts[i]; }
+    }
+    if (minDist <= banned.r) {
+      violations.push({
+        ...banned,
+        dist: Math.round(minDist),
+        closestPt,
+      });
+    }
+  }
+
+  // Check gate coverage
+  const gateHits   = [];
+  const gatesMissed = [];
+  for (const gate of GATES) {
+    let minDist = Infinity;
+    for (let i = 0; i < pts.length; i += 3) {
+      const d = haversine(pts[i].lat, pts[i].lng, gate.lat, gate.lng);
+      if (d < minDist) minDist = d;
+      if (minDist <= gate.r) break; // found it, no need to continue
+    }
+    if (minDist <= gate.r) gateHits.push(gate);
+    else gatesMissed.push({...gate, closestApproach: Math.round(minDist)});
+  }
+
+  return {violations, warnings, gateHits, gatesMissed};
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────
+async function doLogin() {
+  const apiKey = document.getElementById('loginApiKey').value.trim();
+  const email  = document.getElementById('loginEmail').value.trim();
+  const pass   = document.getElementById('loginPass').value;
+  const token  = document.getElementById('loginToken').value.trim();
+  const btn    = document.getElementById('loginBtn');
+  const btnText = document.getElementById('loginBtnText');
+  const errEl = document.getElementById('loginError');
+
+  if (!apiKey) { showErr('Please enter your RideWithGPS API key.'); return; }
+  if (!email) { showErr('Please enter your RideWithGPS email.'); return; }
+
+  API_KEY = apiKey;
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    if (token) {
+      btnText.innerHTML = '<span class="spinner w"></span> Opening with token...';
+      authToken = token;
+      userEmail = email;
+      localStorage.setItem(TOKEN_KEY, authToken);
+      localStorage.setItem(EMAIL_KEY, userEmail);
+      localStorage.setItem(APIKEY_KEY, apiKey);
+      // Resolve userId from token so route loading works
+      try {
+        const ur = await fetch(`${BASE}/users/current.json?apikey=${apiKey}&auth_token=${token}&version=2`);
+        const ud = await ur.json();
+        if (ud.user && ud.user.id) {
+          userId = ud.user.id;
+          localStorage.setItem(TOKEN_KEY, ud.user.auth_token || token);
+        }
+      } catch(e) { /* non-fatal — loadRoutes will try fallback endpoints */ }
+      bootApp();
+      return;
+    }
+
+    if (!pass) {
+      showErr('Enter either a password or an auth token.');
+      btn.disabled = false;
+      btnText.textContent = 'Sign in to RideWithGPS';
+      return;
+    }
+
+    btnText.innerHTML = '<span class="spinner w"></span> Signing in...';
+    const body = new URLSearchParams({ apikey: API_KEY, version: '2', email, password: pass });
+    const r = await fetch(`${BASE}/users/current.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+
+    let data = {};
+    try { data = await r.json(); } catch (e) {}
+
+    if (data.user && data.user.auth_token) {
+      authToken = data.user.auth_token;
+      userId    = data.user.id;
+      userEmail = email;
+      localStorage.setItem(TOKEN_KEY, authToken);
+      localStorage.setItem(EMAIL_KEY, email);
+      localStorage.setItem(APIKEY_KEY, apiKey);
+      const tokInput = document.getElementById('loginToken');
+      if (tokInput) tokInput.value = authToken;
+      bootApp();
+    } else {
+      const msg = data.error || data.message || `Login failed (HTTP ${r.status}). If browser login is flaky, paste a manual auth token instead.`;
+      showErr(msg);
+      btn.disabled = false;
+      btnText.textContent = 'Sign in to RideWithGPS';
+    }
+  } catch(e) {
+    showErr(`Network error: ${e.message}. If browser login is blocked, use a manual auth token.`);
+    btn.disabled = false;
+    btnText.textContent = 'Sign in to RideWithGPS';
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
+});
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(EMAIL_KEY);
+  authToken = userId = userEmail = null;
+  API_KEY = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginPass').value = '';
+  const tokenInput = document.getElementById('loginToken');
+  if (tokenInput) tokenInput.value = '';
+  const btn = document.getElementById('loginBtn');
+  if (btn) btn.disabled = false;
+  document.getElementById('loginBtnText').textContent = 'Sign in to RideWithGPS';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  const tok        = localStorage.getItem(TOKEN_KEY);
+  const em         = localStorage.getItem(EMAIL_KEY);
+  const storedApiKey = localStorage.getItem(APIKEY_KEY);
+  if (storedApiKey) { API_KEY = storedApiKey; document.getElementById('loginApiKey').value = storedApiKey; }
+  if (em) {
+    const emailInput = document.getElementById('loginEmail');
+    if (emailInput) emailInput.value = em;
+  }
+  if (tok) {
+    try {
+      const r = await fetch(`${BASE}/users/current.json?apikey=${API_KEY}&auth_token=${tok}&version=2`);
+      const d = await r.json();
+      if (d.user && d.user.auth_token) {
+        authToken  = d.user.auth_token;
+        userId     = d.user.id;
+        userEmail  = em || d.user.email || 'user';
+        localStorage.setItem(TOKEN_KEY, authToken);
+        bootApp();
+        return;
+      }
+    } catch(e) {}
+    // Token invalid — clear and show login
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(EMAIL_KEY);
+  }
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+let guestMode = false;
+
+function enterGuestMode() {
+  guestMode = true;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('userLabel').textContent = 'Guest';
+  document.getElementById('tab-btn-routes').style.display = 'none';
+  document.getElementById('tab-btn-gpx').style.display = '';
+  document.getElementById('createBtn').disabled = true;
+  document.getElementById('createBtn').title = 'Sign in to RideWithGPS to use this feature';
+  document.getElementById('createBtn').style.opacity = '0.4';
+  initMap();
+  renderWaypoints();
+  renderLegs();
+  switchTab('gpx');
+}
+
+function bootApp() {
+  guestMode = false;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('userLabel').textContent = userEmail || `uid:${userId}`;
+  document.getElementById('tab-btn-routes').style.display = '';
+  document.getElementById('tab-btn-gpx').style.display = 'none';
+  initMap();
+  renderWaypoints();
+  renderLegs();
+  loadRoutes();
+}
+
+// ── API ───────────────────────────────────────────────────────
+async function rwgpsGet(path) {
+  const sep = path.includes("?") ? "&" : "?";
+  const url = `${BASE}${path}${sep}apikey=${API_KEY}&auth_token=${authToken}&version=2`;
+  const r = await fetch(url);
+  if (r.status === 401) { logout(); throw new Error("Session expired — please sign in again."); }
+  if (!r.ok) throw new Error(`HTTP ${r.status} (${path.split("?")[0]})`);
+  return r.json();
+}
+
+// ── LOAD ROUTES ───────────────────────────────────────────────
+async function loadRoutes() {
+  const el = document.getElementById('routesList');
+  el.innerHTML = `<div class="loading-row"><span class="spinner"></span>Loading routes...</div>`;
+
+  const BATCH = 100; // fetch 100 at a time — safe for both legacy and v1
+  const errors = [];
+
+  // Legacy endpoint works with session auth_token.
+  // Strategy: keep incrementing offset until we get back fewer results than
+  // we asked for — that's the end-of-list signal, no pagination metadata needed.
+  const candidates = [
+    ...(userId ? [`${BASE}/users/${userId}/routes.json`, `${BASE}/api/v1/users/${userId}/routes.json`] : []),
+    `${BASE}/api/v1/routes.json`,
+  ];
+
+  for (const endpoint of candidates) {
+    try {
+      const collected = [];
+      let offset = 0;
+
+      while (true) {
+        // Try offset/limit first (legacy), page/page_size as alternative
+        const url = `${endpoint}?apikey=${API_KEY}&auth_token=${authToken}&version=2&offset=${offset}&limit=${BATCH}&page_size=${BATCH}&page=${Math.floor(offset/BATCH)+1}`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+        const d = await r.json();
+        const batch = d.results || d.routes || [];
+        if (!Array.isArray(batch)) throw new Error('unexpected response shape');
+
+        collected.push(...batch);
+
+        el.innerHTML = `<div class="loading-row"><span class="spinner"></span>Loading routes — ${collected.length} so far...</div>`;
+
+        // Stop when we get fewer results than we asked for (end of list)
+        if (batch.length < BATCH) break;
+        offset += BATCH;
+      }
+
+      // Endpoint worked
+      allRoutes = collected;
+      if (!userId && collected.length && collected[0].user_id) userId = collected[0].user_id;
+      renderRoutes(allRoutes);
+      showToast(`Loaded ${allRoutes.length} route${allRoutes.length !== 1 ? 's' : ''} ✓`, 'success');
+      return;
+
+    } catch(e) {
+      errors.push(`${endpoint.replace(BASE,'')} → ${e.message}`);
+    }
+  }
+
+  // All failed
+  el.innerHTML = `
+    <div class="empty-state">
+      <div class="icon">⚠️</div>
+      <p style="font-weight:600;margin-bottom:8px">Could not load routes</p><p style="font-size:12px;color:var(--muted);margin-bottom:10px">If you opened with a manual token, this usually means the token is stale/invalid or RWGPS blocked browser access from this file.</p>
+      <div style="font-size:11px;font-family:'DM Mono',monospace;line-height:1.8;text-align:left;background:#f5f0e8;padding:10px 12px;border-radius:4px;margin-bottom:12px">
+        ${errors.map(e => '✗ ' + e).join('<br>')}
+        <br>uid: ${userId} · token: ${authToken ? authToken.slice(0,8)+'...' : 'missing'}
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Inspect by route ID instead:</p>
+      <div style="display:flex;gap:6px">
+        <input id="manualRouteId" class="search-box" style="margin:0;flex:1" placeholder="Route ID from RWGPS URL">
+        <button class="btn-sm primary" onclick="inspectById()">Inspect</button>
+      </div>
+      <button class="btn-sm" style="margin-top:8px;width:100%" onclick="loadRoutes()">Retry</button>
+    </div>`;
+}
+
+async function inspectById() {
+  const id = parseInt(document.getElementById('manualRouteId').value.trim());
+  if (!id) { showToast('Enter a numeric route ID', 'error'); return; }
+  selectRoute(id, `Route ${id}`);
+}
+
+
+function renderRoutes(routes) {
+  if (!routes.length) {
+    document.getElementById('routesList').innerHTML =
+      `<div class="empty-state"><div class="icon">🚴</div><p>No routes found.<br>Create one in the Create tab!</p></div>`;
+    return;
+  }
+  document.getElementById('routesList').innerHTML = routes.map(r => {
+    const km  = r.distance       ? (r.distance/1000).toFixed(0)+'km' : '—';
+    const elv = r.elevation_gain ? r.elevation_gain.toFixed(0)+'m↑'  : '—';
+    const sn  = (r.name||'Unnamed').replace(/'/g,"\\'");
+    return `
+      <div class="route-card ${selRoute===r.id?'selected':''}" onclick="selectRoute(${r.id},'${sn}')">
+        <h4>${r.name||'Unnamed Route'}</h4>
+        <div class="route-stats"><span>${km}</span><span>${elv}</span></div>
+        <div class="route-compliance-badge pending" id="badge-${r.id}">○ not inspected</div>
+        <div class="route-actions">
+          <button class="btn-sm primary" onclick="event.stopPropagation();selectRoute(${r.id},'${sn}')">Inspect Route</button>
+          <a href="https://ridewithgps.com/routes/${r.id}" target="_blank" class="btn-sm" onclick="event.stopPropagation()">Open RWGPS ↗</a>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterRoutes() {
+  const q = document.getElementById('routeSearch').value.toLowerCase();
+  renderRoutes(allRoutes.filter(r => (r.name||'').toLowerCase().includes(q)));
+}
+
+// ── SELECT + INSPECT ROUTE ────────────────────────────────────
+async function selectRoute(id, name) {
+  selRoute = id; selWp = null;
+
+  // Re-render to show selected state
+  renderRoutes(allRoutes);
+
+  document.getElementById('gatePhotoBar').style.display = 'none';
+  document.getElementById('detailBar').innerHTML = `
+    <h2>${name}</h2>
+    <span class="badge blue">INSPECTING...</span>`;
+
+  // Show embed immediately
+  embedRoute(id);
+
+  // Show compliance panel loading state
+  const cp = document.getElementById('compliancePanel');
+  cp.style.display = 'block';
+  cp.innerHTML = `
+    <div class="compliance-header">
+      <h3>Compliance Report</h3>
+    </div>
+    <div class="loading-row"><span class="spinner"></span>Fetching full route geometry from RideWithGPS...</div>`;
+
+  // Resize map to split view
+  document.getElementById('mapAreaWrap').className = 'map-area split';
+  setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
+
+  // Fetch full route detail (includes track_points)
+  try {
+    showToast('Fetching route geometry for inspection...', 'info');
+
+    // Try multiple auth strategies for the route detail endpoint.
+    // Private routes may need the token passed as a header rather than query param.
+    let route = null;
+    let lastStatus = null;
+
+    const detailEndpoints = [
+      `${BASE}/routes/${id}.json`,
+      `${BASE}/api/v1/routes/${id}.json`,
+    ];
+    const authStrategies = [
+      // Strategy A: query params (works for legacy endpoints)
+      (url) => fetch(`${url}?apikey=${API_KEY}&auth_token=${authToken}&version=2`),
+      // Strategy B: Basic auth header base64(apikey:auth_token)
+      (url) => fetch(`${url}?version=2`, {
+        headers: { 'Authorization': 'Basic ' + btoa(`${API_KEY}:${authToken}`) }
+      }),
+      // Strategy C: Token header
+      (url) => fetch(`${url}?apikey=${API_KEY}&version=2`, {
+        headers: { 'Authorization': `Token token="${authToken}"` }
+      }),
+    ];
+
+    outer:
+    for (const endpoint of detailEndpoints) {
+      for (const strategy of authStrategies) {
+        try {
+          const rr = await strategy(endpoint);
+          lastStatus = rr.status;
+          if (rr.ok) {
+            const dd = await rr.json();
+            route = dd.route || dd;
+            if (route && route.id) break outer;
+          }
+        } catch(e) {}
+      }
+    }
+
+    if (!route) {
+      // Show GPX upload fallback — works regardless of API auth
+      cp.innerHTML = `
+        <div class="compliance-header"><h3>Compliance Report</h3></div>
+        <div class="empty-state">
+          <div class="icon">🔒</div>
+          <p style="font-weight:600;margin-bottom:6px">API access blocked (HTTP ${lastStatus||403})</p>
+          <p style="margin-bottom:14px;font-size:12px;color:var(--muted)">
+            RWGPS restricts API access to private route track data.<br>
+            Export your route as GPX and upload it here instead — works entirely locally, nothing is sent anywhere.
+          </p>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+            In RideWithGPS: open the route → <strong>Export</strong> → <strong>GPX</strong>
+          </p>
+          <label class="btn-full" style="cursor:pointer;margin-bottom:0">
+            📂 Upload GPX file
+            <input type="file" accept=".gpx" style="display:none" onchange="loadGPXFile(event, '${name.replace(/'/g,"\'")}')">
+          </label>
+        </div>`;
+      document.getElementById('detailBar').innerHTML = `<h2>${name}</h2><span class="badge red">API BLOCKED</span>`;
+      document.getElementById('mapAreaWrap').className = 'map-area split';
+      return;
+    }
+
+    // RWGPS returns track_points as objects with x (lng) / y (lat), or as {lat, lng}
+    // Also sometimes nested under route.track_points or as a separate array
+    let pts = [];
+    if (route.track_points && route.track_points.length) {
+      pts = route.track_points.map(p => ({
+        lat: p.y !== undefined ? p.y : (p.lat !== undefined ? p.lat : 0),
+        lng: p.x !== undefined ? p.x : (p.lng !== undefined ? p.lng : 0),
+      })).filter(p => p.lat !== 0 || p.lng !== 0);
+    } else if (route.track && route.track.length) {
+      pts = route.track.map(p => ({lat: p[0], lng: p[1]}));
+    }
+
+    if (pts.length === 0) {
+      cp.innerHTML = `
+        <div class="compliance-header"><h3>Compliance Report</h3></div>
+        <div class="empty-state"><div class="icon">📭</div><p>No track points found in this route.<br>Route may be waypoints-only. Add a full path in RideWithGPS first.</p></div>`;
+      return;
+    }
+
+    // Run inspection
+    const result = inspectRoute(pts);
+    renderComplianceReport(cp, name, route, pts, result);
+
+    // Render route on Leaflet map with violation + gate overlays
+    renderRouteOnMap(name, pts, result);
+    updatePinRouteDistances(pts);
+    renderUserPins(); // refresh pin layer after route load
+
+    // Update sidebar badge
+    const badge = document.getElementById(`badge-${id}`);
+    if (badge) {
+      const hasViolations = result.violations.length > 0;
+      const missingGates  = result.gatesMissed.length;
+      if (hasViolations || missingGates > 0) {
+        badge.className = 'route-compliance-badge fail';
+        badge.textContent = `⛔ ${result.violations.length} violation${result.violations.length!==1?'s':''}, ${missingGates} gate${missingGates!==1?'s':''} missed`;
+      } else {
+        badge.className = 'route-compliance-badge pass';
+        badge.textContent = `✓ All clear — ${pts.length.toLocaleString()} points checked`;
+      }
+    }
+
+    // Update detail bar
+    const vCount = result.violations.length;
+    const gMiss  = result.gatesMissed.length;
+    document.getElementById('detailBar').innerHTML = `
+      <h2>${name}</h2>
+      ${vCount > 0 ? `<span class="badge red">⛔ ${vCount} VIOLATION${vCount!==1?'S':''}</span>` : ''}
+      ${gMiss  > 0 ? `<span class="badge amber">${gMiss} GATE${gMiss!==1?'S':''} MISSED</span>` : ''}
+      ${vCount === 0 && gMiss === 0 ? '<span class="badge green">✓ COMPLIANT</span>' : ''}`;
+
+    showToast(`Inspected ${pts.length.toLocaleString()} track points ✓`, 'success');
+
+  } catch(e) {
+    cp.innerHTML = `
+      <div class="compliance-header"><h3>Compliance Report</h3></div>
+      <div class="empty-state"><div class="icon">⚠️</div><p>Could not fetch route detail.<br><small>${e.message}</small></p></div>`;
+    showToast(`Error fetching route: ${e.message}`, 'error');
+  }
+}
+
+function renderComplianceReport(container, name, route, pts, result) {
+  const {violations, gateHits, gatesMissed} = result;
+  const km = pts.length > 0 ? ((route.distance||0)/1000).toFixed(0) : '?';
+
+  let html = `
+    <div class="compliance-header">
+      <h3>Compliance Report — ${name}</h3>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${pts.length.toLocaleString()} pts · ${km}km</span>
+    </div>
+
+    <div class="compliance-summary">
+      <div class="summary-stat">
+        <span class="num ${violations.length > 0 ? 'red' : 'green'}">${violations.length}</span>
+        <span class="lbl">Violations</span>
+      </div>
+      <div class="summary-stat">
+        <span class="num ${gatesMissed.length > 0 ? 'amber' : 'green'}">${gatesMissed.length}</span>
+        <span class="lbl">Gates missed</span>
+      </div>
+      <div class="summary-stat">
+        <span class="num green">${gateHits.length}</span>
+        <span class="lbl">Gates hit</span>
+      </div>
+      <div class="summary-stat">
+        <span class="num" style="color:var(--accent2)">${BANNED.length}</span>
+        <span class="lbl">Rules checked</span>
+      </div>
+    </div>`;
+
+  // VIOLATIONS
+  if (violations.length > 0) {
+    html += `<div class="violation-list">`;
+    // Group by type
+    const tunnels = violations.filter(v => v.type === 'tunnel');
+    const roads   = violations.filter(v => v.type === 'road');
+    const ferries = violations.filter(v => v.type === 'ferry');
+
+    if (tunnels.length) {
+      html += `<div class="gate-check-section"><h4>⛔ Banned Tunnels Used (${tunnels.length})</h4>`;
+      for (const v of tunnels) {
+        html += `
+          <div class="violation-item">
+            <div class="violation-icon">🚇</div>
+            <div class="violation-body">
+              <div class="violation-name">${v.name}</div>
+              <div class="violation-detail">${v.note}</div>
+              <div class="violation-coords">Closest approach: ${v.dist}m from tunnel entrance (${v.closestPt.lat.toFixed(4)}, ${v.closestPt.lng.toFixed(4)})</div>
+              <div class="violation-actions">
+                <a href="https://www.google.com/maps?q=${v.lat},${v.lng}" target="_blank" class="btn-sm">View on Maps ↗</a>
+                <a href="https://ridewithgps.com/routes/new?start_lat=${v.closestPt.lat}&start_lng=${v.closestPt.lng}" target="_blank" class="btn-sm primary">Reroute from here ↗</a>
+              </div>
+            </div>
+          </div>`;
+      }
+      html += `</div>`;
+    }
+
+    if (roads.length) {
+      html += `<div class="gate-check-section"><h4>⛔ Banned Road Sections Used (${roads.length})</h4>`;
+      for (const v of roads) {
+        html += `
+          <div class="violation-item">
+            <div class="violation-icon">🚫</div>
+            <div class="violation-body">
+              <div class="violation-name">${v.name}</div>
+              <div class="violation-detail">${v.note}</div>
+              <div class="violation-coords">Closest approach: ${v.dist}m (${v.closestPt.lat.toFixed(4)}, ${v.closestPt.lng.toFixed(4)})</div>
+              <div class="violation-actions">
+                <a href="https://www.google.com/maps?q=${v.lat},${v.lng}" target="_blank" class="btn-sm">View on Maps ↗</a>
+                <a href="https://ridewithgps.com/routes/new?start_lat=${v.closestPt.lat}&start_lng=${v.closestPt.lng}" target="_blank" class="btn-sm primary">Reroute from here ↗</a>
+              </div>
+            </div>
+          </div>`;
+      }
+      html += `</div>`;
+    }
+
+    if (ferries.length) {
+      html += `<div class="gate-check-section"><h4>⛔ Banned Ferries Used (${ferries.length})</h4>`;
+      for (const v of ferries) {
+        html += `
+          <div class="violation-item">
+            <div class="violation-icon">⛴</div>
+            <div class="violation-body">
+              <div class="violation-name">${v.name}</div>
+              <div class="violation-detail">${v.note}</div>
+              <div class="violation-coords">Closest approach: ${v.dist}m (${v.closestPt.lat.toFixed(4)}, ${v.closestPt.lng.toFixed(4)})</div>
+              <div class="violation-actions">
+                <a href="https://www.google.com/maps?q=${v.lat},${v.lng}" target="_blank" class="btn-sm">View on Maps ↗</a>
+              </div>
+            </div>
+          </div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  // MISSED GATES
+  if (gatesMissed.length > 0) {
+    html += `
+      <div class="gate-check-section">
+        <h4>⚠️ Gates Not Visited (${gatesMissed.length})</h4>`;
+    for (const g of gatesMissed) {
+      html += `
+        <div class="violation-item">
+          <div class="violation-icon">📍</div>
+          <div class="violation-body">
+            <div class="violation-name warn">${g.name}</div>
+            <div class="violation-detail">Route does not pass within ${g.r}m of this gate. Closest approach: ${g.closestApproach > 50000 ? '>50km' : (g.closestApproach/1000).toFixed(1)+'km'} away.</div>
+            <div class="violation-coords">${g.lat.toFixed(4)}, ${g.lng.toFixed(4)}</div>
+            <div class="violation-actions">
+              <a href="https://ridewithgps.com/routes/new?start_lat=${g.lat}&start_lng=${g.lng}" target="_blank" class="btn-sm primary">Route to this gate ↗</a>
+              <a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" class="btn-sm">View on Maps ↗</a>
+            </div>
+          </div>
+        </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // GATE COVERAGE GRID
+  html += `
+    <div class="gate-check-section">
+      <h4>Gate Coverage (${gateHits.length}/${GATES.length})</h4>
+      <div class="gate-grid">
+        ${GATES.map(g => {
+          const hit = gateHits.find(h => h.id === g.id);
+          return `<div class="gate-pill ${hit?'hit':'miss'}">
+            <div class="dot"></div>
+            <span>${g.name.replace('Gate ','').replace('Start — ','START ').replace('Finish — ','FIN ')}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // ALL CLEAR
+  if (violations.length === 0 && gatesMissed.length === 0) {
+    html = html.replace(/<div class="compliance-summary">/, `
+      <div class="all-clear">
+        <div class="big">✅</div>
+        <h4>Route is compliant!</h4>
+        <p>No banned tunnels, roads or ferries detected.<br>All ${GATES.length} mandatory gates visited.</p>
+      </div>
+      <div class="compliance-summary">`);
+  }
+
+  container.innerHTML = html;
+}
+
+// ── EMBED ROUTE ───────────────────────────────────────────────
+// ── LEAFLET MAP ───────────────────────────────────────────────
+
+const RECOMMENDED_ROUTE = [ // kept for reference, no longer rendered
+  { leg:'L1', label:'Start → Brocken', color:'#e8850a', coords:[
+    [52.004, 5.461],   // Amerongen
+    [51.985, 5.899],   // Arnhem
+    [51.843, 5.866],   // Nijmegen
+    [51.788, 6.139],   // Kleve (DE border)
+    [51.660, 6.620],   // Wesel
+    [51.515, 7.465],   // Dortmund corridor
+    [51.719, 8.754],   // Paderborn
+    [51.906, 10.430],  // Goslar
+    [51.836, 10.787],  // Wernigerode
+    [51.799, 10.615],  // Gate I — Brocken
+  ]},
+  { leg:'L2', label:'Brocken → Gate II (via Sweden)', color:'#e8850a', coords:[
+    [51.799, 10.615],  // Brocken
+    [51.896, 11.056],  // Halberstadt
+    [52.129, 11.628],  // Magdeburg
+    [52.422, 10.787],  // Wolfsburg
+    [53.575,  9.991],  // Hamburg
+    [54.075,  9.982],  // Neumünster
+    [54.501, 11.226],  // Puttgarden ferry ⛴
+    [54.693, 11.390],  // Rødby (Denmark)
+    [55.230, 11.763],  // Næstved
+    [55.642, 12.087],  // Roskilde
+    [55.676, 12.568],  // Copenhagen
+    [56.032, 12.617],  // Helsingør ferry ⛴
+    [56.043, 12.692],  // Helsingborg (Sweden)
+    [56.674, 12.858],  // Halmstad
+    [57.708, 11.967],  // Gothenburg area
+    [58.540, 11.350],  // Bohuslän coast
+    [58.961, 11.043],  // Strömstad area
+    [59.094, 11.252],  // Svinesund bridge ⛴
+    [59.120, 11.395],  // Gate II — Fredriksten
+  ]},
+  { leg:'L3', label:'Gate II → Gate III + Refuge', color:'#e8850a', coords:[
+    [59.120, 11.395],  // Gate II — Fredriksten
+    [59.283, 10.985],  // Sarpsborg area (west)
+    [59.091,  9.083],  // Skien area
+    [58.850,  8.012],  // Kviteseid (Rv9 corridor)
+    [58.686,  7.790],  // Sirdal entry
+    [59.043,  7.146],  // Gate III — Suleskard
+    [59.060,  6.900],  // Refuge (TBC)
+  ]},
+  { leg:'L4', label:'Gate IV — Lysebotn', color:'#e8850a', coords:[
+    [59.060,  6.900],  // Refuge
+    [59.055,  6.645],  // Gate IV — Lysebotn
+    [59.042,  6.228],  // Forsand (after ferry)
+    [59.082,  6.057],  // Rv13 north
+    [59.336,  6.388],  // Sauda
+    [59.790,  6.570],  // Odda approach
+  ]},
+  { leg:'L5', label:'Gates V, IX, X, XI', color:'#e8850a', coords:[
+    [59.790,  6.570],  // Odda
+    [60.069,  6.546],  // Odda/Hardanger
+    [60.428,  7.253],  // Gate V — Vøringsfossen
+    [60.530,  7.495],  // Rv7 east
+    [60.881,  8.554],  // Geilo
+    [61.378,  8.862],  // Otta area
+    [61.840,  8.566],  // Gate XI — Lom
+    [61.553,  7.939],  // Gate VI — Sognefjellet
+    [61.350,  7.600],  // Rv55 descent west
+    [61.213,  7.100],  // Sogndal area
+    [61.107,  8.261],  // Rv50 Filefjell (Laerdalstunnelen alternative)
+    [61.047,  7.813],  // Gate IX — Borgund
+    [61.213,  7.432],  // North from Borgund via Rv5
+    [61.301,  7.247],  // Solvorn ferry ⛴
+    [61.298,  7.322],  // Gate X — Urnes
+    [61.301,  7.247],  // Back to Solvorn
+    [61.400,  7.299],  // Gaupne (north, avoids Fodnestunnelen)
+  ]},
+  { leg:'L6', label:'Gates VI–VIII (Sognefjellet loop)', color:'#e8850a', coords:[
+    [61.400,  7.299],  // Gaupne
+    [61.553,  7.939],  // Gate VI — Sognefjellet
+    [61.440,  7.200],  // Sogndal/Hella
+    [61.351,  6.518],  // Gate VII — Gaularfjellet (Fv13)
+    [61.457,  6.063],  // Førde
+    [61.700,  6.800],  // North toward Stryn
+    [61.974,  7.896],  // Grotli (E15 east approach)
+    [61.951,  7.330],  // Gate VIII — Strynefjellsveg
+    [61.907,  6.721],  // Stryn
+  ]},
+  { leg:'L7', label:'Gates XII–XIV (Dalsnibba + Trollstigen)', color:'#e8850a', coords:[
+    [61.907,  6.721],  // Stryn
+    [62.017,  7.018],  // North toward Geiranger
+    [62.100,  7.206],  // Geiranger village
+    [62.049,  7.269],  // Gate XIV — Dalsnibba
+    [62.100,  7.206],  // Back to Geiranger
+    [62.149,  7.134],  // Ørnvegen north (avoids Hellesylt tunnel ↑)
+    [62.294,  7.393],  // Eidsdal
+    [62.459,  7.594],  // Valldal
+    [62.568,  7.715],  // Åndalsnes
+    [62.455,  7.669],  // Gate XIII — Trollstigen
+    [62.509,  9.067],  // Gate XII — Svøufallet (east via Rv70)
+  ]},
+  { leg:'L8', label:'Gate XV — Atlantic Road', color:'#e8850a', coords:[
+    [62.509,  9.067],  // Svøufallet
+    [62.737,  7.158],  // Molde (ferry to Vestnes ⛴)
+    [62.646,  7.073],  // Vestnes
+    [63.010,  7.430],  // Gate XV — Atlantic Road
+  ]},
+  { leg:'L9', label:'Gate XVI → Finish', color:'#e8850a', coords:[
+    [63.010,  7.430],  // Atlantic Road
+    [62.456,  6.016],  // Ørsta area (south)
+    [62.048,  5.362],  // Selje
+    [62.187,  5.127],  // Gate XVI — Vestkapp
+    [62.048,  5.362],  // Back to Selje
+    [61.854,  6.081],  // Lote–Anda ferry ⛴
+    [62.375,  6.331],  // Festøya ferry ⛴
+    [62.165,  5.943],  // Lauvstad–Volda ferry ⛴
+    [62.171,  6.009],  // Finish — Volda
+  ]},
+];
+
+
+function placeWaypointMarkers() {
+  if (!wpMarkerGroup) return;
+  wpMarkerGroup.clearLayers();
+  const col = {start:'#0f0f0f',finish:'#c8410a',gate:'#1a5c8a',refuge:'#2a7a3b',ferry:'#6b4a1a',waypoint:'#555'};
+  WPS.forEach((wp, i) => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="marker-wp ${wp.type}" style="background:${col[wp.type]||'#555'}">${wp.seq}</div>`,
+      iconSize: [28,28], iconAnchor: [14,14],
+    });
+    L.marker([wp.lat, wp.lng], {icon, zIndexOffset:200})
+      .on('click', () => selectWp(i))
+      .addTo(wpMarkerGroup);
+  });
+}
+
+async function osrmRoute(from, to) {
+  try {
+    const r = await fetch(`${OSRM_BASE}/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d.routes || !d.routes[0]) return null;
+    return { coords: d.routes[0].geometry.coordinates.map(([lng,lat]) => [lat,lng]), distanceM: d.routes[0].distance };
+  } catch(e) { return null; }
+}
+
+async function previewRoute() {
+  const btn = document.getElementById('previewBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner w"></span> Routing...';
+  routedTrackPoints = null;
+  const seen = new Set(), pts = [];
+  LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
+    l.wps.forEach(id => {
+      if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
+        seen.add(id); pts.push(wpMap[id]);
+      }
+    })
+  );
+  if (pts.length < 2) { showToast('Select at least 2 waypoints','error'); btn.disabled=false; btn.innerHTML='🗺 Preview on Road Network'; return; }
+
+  const routingPts = injectRoutingPins(pts);
+  const injectedCount = routingPts.length - pts.length;
+  if (injectedCount > 0) showToast(`Routing via ${injectedCount} user pin${injectedCount!==1?'s':''}`, 'info');
+
+  document.getElementById('routingOverlay').classList.add('active');
+  routeLayerGroup && routeLayerGroup.clearLayers();
+  savedRouteSegments = [];
+  document.getElementById('compliancePanel').style.display = 'none';
+  document.getElementById('mapAreaWrap').className = 'map-area full';
+  setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
+
+  const fill = document.getElementById('progressFill'), stepEl = document.getElementById('routingStep');
+  const wpLegColor = {};
+  LEGS.forEach((leg, li) => { if (selLegs.has(leg.id)) leg.wps.forEach(id => { wpLegColor[id] = LEG_COLORS[li % LEG_COLORS.length]; }); });
+
+  const segments = routingPts.length - 1;
+  let totalDist = 0;
+  const allTP = [{lat: routingPts[0].lat, lng: routingPts[0].lng}];
+  let failedSegs = 0;
+
+  for (let i = 0; i < segments; i++) {
+    const fw = routingPts[i], tw = routingPts[i+1];
+    fill.style.width = Math.round((i/segments)*100) + '%';
+    stepEl.textContent = `Segment ${i+1}/${segments}: ${fw.name.split('—')[0].trim()} → ${tw.name.split('—')[0].trim()}`;
+    const color = wpLegColor[fw.id] || wpLegColor[tw.id] || '#888';
+    let sc, sd;
+    if (fw.type === 'ferry') {
+      // Departing FROM a ferry = this segment is the water crossing itself → always dashed
+      sc = [[fw.lat,fw.lng],[tw.lat,tw.lng]]; sd = haversine(fw.lat,fw.lng,tw.lat,tw.lng);
+      L.polyline(sc, {color, weight:2.5, opacity:0.75, dashArray:'6 5'}).addTo(routeLayerGroup);
+    } else {
+      // Land segment — including road approaches TO ferry terminals — try OSRM
+      const res = await osrmRoute(fw, tw);
+      if (res) {
+        sc = res.coords; sd = res.distanceM;
+        L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
+        L.polyline(sc, {color, weight:3.5, opacity:0.85}).addTo(routeLayerGroup);
+      } else {
+        failedSegs++;
+        sc = [[fw.lat,fw.lng],[tw.lat,tw.lng]]; sd = haversine(fw.lat,fw.lng,tw.lat,tw.lng);
+        L.polyline(sc, {color, weight:2.5, opacity:0.6, dashArray:'3 4'}).addTo(routeLayerGroup);
+      }
+    }
+    totalDist += sd;
+    sc.slice(1).forEach(([lat,lng]) => allTP.push({lat,lng}));
+    await sleep(80);
+  }
+
+  // Mark injected routing pins on the map
+  for (const rp of routingPts) {
+    if (rp.type === 'pin') {
+      L.circleMarker([rp.lat, rp.lng], {
+        radius: 8, color: 'white', weight: 2, fillColor: '#7c3aed', fillOpacity: 1
+      }).bindTooltip(`📌 ${rp.name} (via-point)`).addTo(routeLayerGroup);
+    }
+  }
+
+  fill.style.width = '100%'; stepEl.textContent = 'Done!';
+  await sleep(400);
+  document.getElementById('routingOverlay').classList.remove('active');
+  routedTrackPoints = allTP;
+  savedRouteSegments = [];
+  routeLayerGroup.eachLayer(l => {
+    if (l.getLatLngs) savedRouteSegments.push({
+      latlngs: l.getLatLngs(),
+      options: { color:l.options.color, weight:l.options.weight,
+                 opacity:l.options.opacity, dashArray:l.options.dashArray }
+    });
+  });
+  placeWaypointMarkers();
+
+  const km = (totalDist/1000).toFixed(0);
+  document.getElementById('statTotal').textContent = km;
+  document.getElementById('detailBar').innerHTML = `<h2>Road-Routed Preview — ${km}km</h2>` +
+    `<span class="badge green">OSRM CYCLING</span>` +
+    (failedSegs ? `<span class="badge amber">${failedSegs} FALLBACK SEGS</span>` : '');
+  try {
+    const layers = []; routeLayerGroup.eachLayer(l => layers.push(l));
+    if (layers.length) leafletMap.fitBounds(L.featureGroup(layers).getBounds().pad(0.05));
+  } catch(e) {}
+  btn.disabled = false; btn.innerHTML = '🗺 Re-Preview Route';
+  showToast(`Routed ${segments} segments — ${km}km on cycling roads!`, 'success');
+}
+
+let leafletMap = null;
+let routeLayerGroup = null;
+let wpPulseGroup = null;
+
+// ── USER PINS ─────────────────────────────────────────────────
+const USER_PINS_KEY = 'via.userPins.v1';
+let userPins = [];
+let userPinLayerGroup = null;
+let pinModeActive = false;
+let _pendingPinPopup = null;
+
+function loadUserPins() {
+  try { userPins = JSON.parse(localStorage.getItem(USER_PINS_KEY) || '[]'); } catch(e) { userPins = []; }
+}
+function saveUserPins() {
+  localStorage.setItem(USER_PINS_KEY, JSON.stringify(userPins));
+}
+
+function togglePinMode() {
+  pinModeActive = !pinModeActive;
+  const btn = document.getElementById('addPinBtn');
+  const mapWrap = document.getElementById('mapAreaWrap');
+  if (pinModeActive) {
+    btn.classList.add('active');
+    btn.textContent = '✕ Cancel Pin';
+    mapWrap.classList.add('pin-mode');
+    showToast('Click anywhere on the map to drop a pin', 'info');
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '📌 Add Pin';
+    mapWrap.classList.remove('pin-mode');
+    if (_pendingPinPopup) { leafletMap.closePopup(_pendingPinPopup); _pendingPinPopup = null; }
+  }
+}
+
+function renderUserPins() {
+  if (!userPinLayerGroup) return;
+  userPinLayerGroup.clearLayers();
+
+  const icon = L.divIcon({ className: 'leaflet-user-pin-icon', iconSize: [16, 16] });
+
+  for (const pin of userPins) {
+    const marker = L.marker([pin.lat, pin.lng], { icon, title: pin.name });
+    marker.bindPopup(`
+      <div style="min-width:160px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:3px">📌 ${pin.name}</div>
+        ${pin.note ? `<div style="font-size:11px;color:#444;line-height:1.5;margin-bottom:5px">${pin.note}</div>` : ''}
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:#888;margin-bottom:6px">${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}</div>
+        <button onclick="removeUserPin('${pin.id}')" style="font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:3px 8px;border:1px solid #c8410a;border-radius:3px;background:white;color:#c8410a;cursor:pointer">Delete pin</button>
+      </div>`);
+    marker.addTo(userPinLayerGroup);
+  }
+
+  renderPinsList();
+}
+
+function renderPinsList() {
+  const el = document.getElementById('pinsList');
+  if (!el) return;
+
+  if (userPins.length === 0) {
+    el.innerHTML = `<div class="pin-empty"><div class="icon">📌</div><p>No pins yet.<br>Click <strong>📌 Add Pin</strong> on the map<br>to drop your first waypoint.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = userPins.map(pin => {
+    const distStr = pin.routeDistM != null
+      ? `<span style="color:#2a7a3b">${pin.routeDistM < 1000 ? Math.round(pin.routeDistM)+'m' : (pin.routeDistM/1000).toFixed(1)+'km'} from route</span> · `
+      : '';
+    const wpBorder = pin.useAsWaypoint ? 'border-left:3px solid #7c3aed;padding-left:11px;background:#f9f5ff;' : '';
+    return `
+      <div class="pin-list-item" style="${wpBorder}">
+        <div class="pin-list-icon" style="${pin.useAsWaypoint ? 'background:#7c3aed' : ''}">📌</div>
+        <div class="pin-list-info">
+          <div class="pin-list-name">${pin.name}</div>
+          <div class="pin-list-meta">${distStr}${pin.lat.toFixed(4)}°N ${Math.abs(pin.lng).toFixed(4)}°E</div>
+          ${pin.note ? `<div class="pin-list-note">${pin.note}</div>` : ''}
+          <label style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;cursor:pointer;font-size:11px;color:${pin.useAsWaypoint ? '#7c3aed' : 'var(--muted)'}">
+            <input type="checkbox" ${pin.useAsWaypoint ? 'checked' : ''} onchange="togglePinWaypoint('${pin.id}')" style="accent-color:#7c3aed;cursor:pointer">
+            Use as routing via-point
+          </label>
+        </div>
+        <button class="pin-del-btn" onclick="removeUserPin('${pin.id}')" title="Delete pin">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function togglePinWaypoint(id) {
+  const pin = userPins.find(p => p.id === id);
+  if (!pin) return;
+  pin.useAsWaypoint = !pin.useAsWaypoint;
+  saveUserPins();
+  renderPinsList();
+}
+
+function injectRoutingPins(pts) {
+  const active = userPins.filter(p => p.useAsWaypoint);
+  if (!active.length) return pts;
+
+  // For each active pin find the gap [i, i+1] in pts that minimises combined distance
+  const groups = {};
+  for (const pin of active) {
+    let bestIdx = 0, bestScore = Infinity;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const score = haversine(pin.lat, pin.lng, pts[i].lat, pts[i].lng)
+                  + haversine(pin.lat, pin.lng, pts[i+1].lat, pts[i+1].lng);
+      if (score < bestScore) { bestScore = score; bestIdx = i; }
+    }
+    if (!groups[bestIdx]) groups[bestIdx] = [];
+    groups[bestIdx].push(pin);
+  }
+
+  // Build new array, inserting pins at their chosen gaps sorted by distance from pts[i]
+  const result = [];
+  for (let i = 0; i < pts.length; i++) {
+    result.push(pts[i]);
+    if (groups[i]) {
+      groups[i].sort((a, b) =>
+        haversine(a.lat, a.lng, pts[i].lat, pts[i].lng) -
+        haversine(b.lat, b.lng, pts[i].lat, pts[i].lng));
+      for (const pin of groups[i]) {
+        result.push({ lat: pin.lat, lng: pin.lng, name: pin.name, type: 'pin', id: pin.id });
+      }
+    }
+  }
+  return result;
+}
+
+function addUserPin(lat, lng, name, note) {
+  const pin = {
+    id: 'pin-' + Date.now(),
+    lat, lng,
+    name: name || 'My pin',
+    note: note || '',
+    routeDistM: null,
+    useAsWaypoint: false,
+  };
+  // If route is loaded, compute distance to route
+  if (window._lastRoutePts && window._lastRoutePts.length) {
+    let minD = Infinity;
+    for (let i = 0; i < window._lastRoutePts.length; i += 3) {
+      const d = haversine(lat, lng, window._lastRoutePts[i].lat, window._lastRoutePts[i].lng);
+      if (d < minD) minD = d;
+    }
+    pin.routeDistM = Math.round(minD);
+  }
+  userPins.push(pin);
+  saveUserPins();
+  renderUserPins();
+  showToast(`Pin "${pin.name}" saved`, 'success');
+}
+
+function removeUserPin(id) {
+  userPins = userPins.filter(p => p.id !== id);
+  saveUserPins();
+  renderUserPins();
+  leafletMap && leafletMap.closePopup();
+}
+
+function clearAllPins() {
+  if (userPins.length === 0) return;
+  if (!confirm(`Delete all ${userPins.length} pin${userPins.length !== 1 ? 's' : ''}?`)) return;
+  userPins = [];
+  saveUserPins();
+  renderUserPins();
+  showToast('All pins cleared', 'info');
+}
+
+function updatePinRouteDistances(pts) {
+  if (!pts || !pts.length) return;
+  window._lastRoutePts = pts;
+  for (const pin of userPins) {
+    let minD = Infinity;
+    for (let i = 0; i < pts.length; i += 3) {
+      const d = haversine(pin.lat, pin.lng, pts[i].lat, pts[i].lng);
+      if (d < minD) minD = d;
+    }
+    pin.routeDistM = Math.round(minD);
+  }
+  saveUserPins();
+  renderPinsList();
+}
+
+function initMap() {
+  if (leafletMap) return;
+  leafletMap = L.map('map', { zoomControl: true });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd', maxZoom: 19,
+  }).addTo(leafletMap);
+  routeLayerGroup = L.layerGroup().addTo(leafletMap);
+  wpMarkerGroup   = L.layerGroup().addTo(leafletMap);
+  wpPulseGroup    = L.layerGroup().addTo(leafletMap);
+  poiLayerGroup   = L.layerGroup().addTo(leafletMap);
+  userPinLayerGroup = L.layerGroup().addTo(leafletMap);
+  leafletMap.fitBounds([[51.5, 4.5], [63.5, 12.5]]);
+  placeWaypointMarkers();
+  setupPOIMapListener();
+
+  // Pin drop handler
+  leafletMap.on('click', function(e) {
+    if (!pinModeActive) return;
+    const { lat, lng } = e.latlng;
+
+    // Close any open pending popup
+    if (_pendingPinPopup) leafletMap.closePopup(_pendingPinPopup);
+
+    const uid = 'pf-' + Date.now();
+    const popup = L.popup({ closeButton: true, maxWidth: 260 })
+      .setLatLng([lat, lng])
+      .setContent(`
+        <div class="pin-popup-form">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#7c3aed;margin-bottom:2px">Drop pin here</div>
+          <input id="${uid}-name" class="" placeholder="Pin name" style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:13px;font-family:Barlow,sans-serif;width:100%">
+          <textarea id="${uid}-note" placeholder="Note (optional)" style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:11px;font-family:Barlow,sans-serif;width:100%;resize:vertical;min-height:48px;margin-top:4px"></textarea>
+          <button onclick="(function(){
+            var n=document.getElementById('${uid}-name').value.trim()||'My pin';
+            var t=document.getElementById('${uid}-note').value.trim();
+            addUserPin(${lat},${lng},n,t);
+            leafletMap.closePopup();
+            if(pinModeActive)togglePinMode();
+          })()" style="margin-top:4px;padding:5px 12px;background:#7c3aed;color:white;border:none;border-radius:3px;font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;width:100%">Save Pin</button>
+        </div>`)
+      .openOn(leafletMap);
+    _pendingPinPopup = popup;
+
+    // Auto-focus the name input
+    setTimeout(() => {
+      const inp = document.getElementById(uid + '-name');
+      if (inp) inp.focus();
+    }, 100);
+  });
+
+  loadUserPins();
+  renderUserPins();
+}
+
+function renderRouteOnMap(routeName, pts, result) {
+  initMap();
+  routeLayerGroup.clearLayers();
+
+  if (!pts || pts.length === 0) return;
+
+  // Draw route line
+  const latlngs = pts.map(p => [p.lat, p.lng]);
+  L.polyline(latlngs, { color: '#1a5c8a', weight: 3, opacity: 0.85 }).addTo(routeLayerGroup);
+
+  // Fit map to route
+  leafletMap.fitBounds(L.latLngBounds(latlngs), { padding: [20, 20] });
+
+  // Start marker
+  L.circleMarker([pts[0].lat, pts[0].lng], {
+    radius: 8, color: 'white', weight: 2, fillColor: '#0f0f0f', fillOpacity: 1
+  }).bindTooltip('Start').addTo(routeLayerGroup);
+
+  // End marker
+  const last = pts[pts.length - 1];
+  L.circleMarker([last.lat, last.lng], {
+    radius: 8, color: 'white', weight: 2, fillColor: '#c8410a', fillOpacity: 1
+  }).bindTooltip('Finish').addTo(routeLayerGroup);
+
+  // Violation markers (red)
+  for (const v of result.violations) {
+    const icon = L.divIcon({ className: 'leaflet-violation-icon', iconSize: [14,14] });
+    L.marker([v.lat, v.lng], { icon })
+      .bindPopup(`<div class="violation-popup"><h4>⛔ ${v.name}</h4><p>${v.note}</p><br><a href="https://ridewithgps.com/routes/new?start_lat=${v.closestPt.lat}&start_lng=${v.closestPt.lng}" target="_blank">Reroute from here ↗</a></div>`)
+      .addTo(routeLayerGroup);
+    // Red dot at closest track point
+    L.circleMarker([v.closestPt.lat, v.closestPt.lng], {
+      radius: 5, color: '#c8410a', weight: 2, fillColor: '#fde8e4', fillOpacity: 1
+    }).bindTooltip(`Route passes ${v.dist}m from ${v.name}`).addTo(routeLayerGroup);
+  }
+
+  // Gate markers
+  for (const g of result.gateHits) {
+    L.circleMarker([g.lat, g.lng], {
+      radius: 7, color: 'white', weight: 2, fillColor: '#2a7a3b', fillOpacity: 1
+    }).bindTooltip(`✅ ${g.name}`).addTo(routeLayerGroup);
+  }
+  for (const g of result.gatesMissed) {
+    L.circleMarker([g.lat, g.lng], {
+      radius: 7, color: 'white', weight: 2, fillColor: '#ccc', fillOpacity: 1
+    }).bindTooltip(`⚠️ ${g.name} — not visited`).addTo(routeLayerGroup);
+  }
+
+  // Mandatory gates from WPS (small blue dots for reference)
+  for (const wp of WPS.filter(w => w.type === 'gate' || w.type === 'start' || w.type === 'finish')) {
+    L.circleMarker([wp.lat, wp.lng], {
+      radius: 4, color: '#1a5c8a', weight: 1.5, fillColor: '#e6f1fb', fillOpacity: 0.9
+    }).bindTooltip(wp.name).addTo(routeLayerGroup);
+  }
+
+  // Map legend
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = () => {
+    const d = L.DomUtil.create('div');
+    d.style.cssText = 'background:white;padding:8px 10px;border-radius:4px;font-size:11px;font-family:Barlow,sans-serif;line-height:1.9;box-shadow:0 1px 5px rgba(0,0,0,0.2)';
+    d.innerHTML = `
+      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1a5c8a;margin-right:5px;vertical-align:middle"></span>Your route</div>
+      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8410a;margin-right:5px;vertical-align:middle"></span>Violation</div>
+      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2a7a3b;margin-right:5px;vertical-align:middle"></span>Gate hit</div>
+      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-right:5px;vertical-align:middle"></span>Gate missed</div>
+      <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:5px;vertical-align:middle"></span>My pins</div>
+      `;
+    return d;
+  };
+  // Only add legend once
+  if (!leafletMap._via_legend) {
+    legend.addTo(leafletMap);
+    leafletMap._via_legend = true;
+  }
+}
+
+function embedRoute(id) {
+  // No-op: map is rendered after track points are fetched in selectRoute
+}
+
+// ── WAYPOINTS SIDEBAR ─────────────────────────────────────────
+function renderWaypoints() {
+  const gateWps = WPS.map((wp, i) => ({wp, i})).filter(({wp}) => GATE_TYPES.has(wp.type));
+  document.getElementById('waypointsList').innerHTML = gateWps.map(({wp, i}) => `
+    <div class="waypoint-item ${selWp===i?'selected':''}" onclick="selectWp(${i})">
+      <div class="wp-badge ${wp.type}">${wp.seq}</div>
+      <div class="wp-info">
+        <div class="wp-name">${wp.name}</div>
+        <div class="wp-meta">${wp.lat.toFixed(4)}°N ${Math.abs(wp.lng).toFixed(4)}°E · ${wp.country}</div>
+        ${wp.tags.length?`<div class="wp-tags">${wp.tags.map(t=>`<span class="wp-tag ${t.c}">${t.l}</span>`).join('')}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function selectWp(i) {
+  selWp = i;
+  renderWaypoints();
+  const wp = WPS[i];
+
+  // Only collapse compliance panel if an inspected RWGPS route is active
+  if (selRoute) {
+    document.getElementById('compliancePanel').style.display = 'none';
+    document.getElementById('mapAreaWrap').className = 'map-area full';
+    routeLayerGroup.clearLayers();
+  }
+  setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
+
+  // Build detail bar badges
+  const badges = wp.tags.map(t => {
+    const cls = t.c==='banned'?'red':t.c==='permitted'?'green':'amber';
+    return `<span class="badge ${cls}">${t.l}</span>`;
+  }).join('');
+  document.getElementById('detailBar').innerHTML = `<h2>${wp.name}</h2>${badges}`;
+
+  // Show photo if available — only reveal bar after image loads to avoid black flash
+  const photoBar = document.getElementById('gatePhotoBar');
+  const photoImg = document.getElementById('gatePhotoImg');
+  photoBar.style.display = 'none';
+  if (wp.photo) {
+    photoImg.onload  = () => { photoBar.style.display = 'block'; };
+    photoImg.onerror = () => { photoBar.style.display = 'none'; };
+    photoImg.src = wp.photo;
+    photoImg.alt = wp.name;
+    document.getElementById('gatePhotoCredit').textContent = wp.name;
+  }
+
+  // Show weather for gates, start, and finish
+  if (['gate', 'start', 'finish', 'refuge'].includes(wp.type)) {
+    showGateWeather(wp.lat, wp.lng);
+  } else {
+    document.getElementById('weatherBar').style.display = 'none';
+  }
+
+  initMap();
+  // Clear only the pulse marker, never the route polylines
+  if (wpPulseGroup) wpPulseGroup.clearLayers();
+  leafletMap.setView([wp.lat, wp.lng], Math.max(leafletMap.getZoom(), 11), {animate: true});
+  const col = {gate:'#1a5c8a',ferry:'#6b4a1a',refuge:'#2a7a3b',start:'#0f0f0f',finish:'#c8410a'};
+  L.circleMarker([wp.lat, wp.lng], {
+    radius: 10, color: 'white', weight: 2,
+    fillColor: col[wp.type] || '#888', fillOpacity: 1
+  }).bindPopup(`<div class="violation-popup"><h4>${wp.name}</h4><p>${wp.note}</p><br>
+    <a href="https://ridewithgps.com/routes/new?start_lat=${wp.lat}&start_lng=${wp.lng}" target="_blank">Plan from here on RWGPS ↗</a></div>`)
+    .addTo(wpPulseGroup).openPopup();
+}
+
+// ── GATE WEATHER ──────────────────────────────────────────────
+const wxCache = new Map();
+
+const WX_CODES = {
+  0:'☀️ Clear', 1:'🌤 Mainly clear', 2:'⛅ Partly cloudy', 3:'☁️ Overcast',
+  45:'🌫 Fog', 48:'🌫 Icy fog',
+  51:'🌦 Light drizzle', 53:'🌦 Drizzle', 55:'🌧 Heavy drizzle',
+  61:'🌧 Light rain', 63:'🌧 Rain', 65:'🌧 Heavy rain',
+  71:'🌨 Light snow', 73:'🌨 Snow', 75:'❄️ Heavy snow', 77:'🌨 Snow grains',
+  80:'🌦 Showers', 81:'🌧 Heavy showers', 82:'⛈ Violent showers',
+  85:'🌨 Snow showers', 86:'❄️ Heavy snow showers',
+  95:'⛈ Thunderstorm', 96:'⛈ Thunderstorm+hail', 99:'⛈ Heavy thunderstorm',
+};
+
+const WIND_DIRS = ['N','NE','E','SE','S','SW','W','NW'];
+function windDir(deg) { return WIND_DIRS[Math.round(deg / 45) % 8]; }
+
+async function fetchGateWeather(lat, lng) {
+  const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+  if (wxCache.has(key)) return wxCache.get(key);
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+    `&daily=temperature_2m_max,temperature_2m_min,windspeed_10m_max,winddirection_10m_dominant,precipitation_sum,weathercode` +
+    `&timezone=Europe%2FOslo&forecast_days=3`;
+
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Weather fetch failed');
+  const data = await r.json();
+  wxCache.set(key, data.daily);
+  return data.daily;
+}
+
+function wxDayName(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+async function showGateWeather(lat, lng) {
+  const bar = document.getElementById('weatherBar');
+  bar.style.display = 'block';
+  bar.innerHTML = '<div class="wx-loading"><span class="spinner" style="width:10px;height:10px;margin-right:6px;border-width:1.5px;border-color:rgba(255,255,255,0.2);border-top-color:#7db8e8"></span>Loading forecast...</div>';
+
+  try {
+    const d = await fetchGateWeather(lat, lng);
+    const days = d.time.map((t, i) => `
+      <div class="wx-day">
+        <div class="wx-date">${wxDayName(t)}</div>
+        <div class="wx-icon">${(WX_CODES[d.weathercode[i]] || '🌡').split(' ')[0]}</div>
+        <div class="wx-temp">${Math.round(d.temperature_2m_max[i])}° <span>/ ${Math.round(d.temperature_2m_min[i])}°</span></div>
+        <div class="wx-wind">💨 ${Math.round(d.windspeed_10m_max[i])} km/h ${windDir(d.winddirection_10m_dominant[i])}</div>
+        <div class="wx-precip">🌧 ${d.precipitation_sum[i].toFixed(1)} mm</div>
+      </div>`).join('');
+    bar.innerHTML = `<div class="wx-days">${days}</div>`;
+  } catch(e) {
+    bar.innerHTML = '<div class="wx-loading" style="color:#c87a7a">⚠ Forecast unavailable</div>';
+  }
+}
+
+// ── LEGS ──────────────────────────────────────────────────────
+function renderLegs() {
+  document.getElementById('legSelector').innerHTML = LEGS.map((l,li) => {
+    const viaIds = l.wps.filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type));
+    const viaHtml = selLegs.has(l.id) && viaIds.length ? `
+      <div class="leg-vias" onclick="event.stopPropagation()">
+        ${viaIds.map(id => {
+          const w = wpMap[id];
+          const on = pinnedViaWps.has(id);
+          const icon = w.type === 'ferry' ? '⛴' : w.type === 'refuge' ? '🏕' : '📍';
+          return `<div class="via-item ${on?'on':''}" onclick="toggleViaWp('${id}')">
+            <span class="via-check">${on?'✓':'○'}</span>${icon} ${w.name.split('—')[0].split(',')[0].trim()}
+          </div>`;
+        }).join('')}
+      </div>` : '';
+    return `
+    <div class="leg-row ${selLegs.has(l.id)?'on':''}" onclick="toggleLeg('${l.id}')">
+      <div class="leg-check">${selLegs.has(l.id)?'✓':''}</div>
+      <div class="leg-color" style="background:${LEG_COLORS[li%LEG_COLORS.length]};${selLegs.has(l.id)?'':'opacity:0.25'}"></div>
+      <div class="leg-label">${l.name}</div>
+      <div class="leg-dist">${l.dist}</div>
+    </div>${viaHtml}`;
+  }).join('');
+}
+
+function toggleViaWp(id) {
+  pinnedViaWps.has(id) ? pinnedViaWps.delete(id) : pinnedViaWps.add(id);
+  routedTrackPoints = null;
+  renderLegs();
+}
+
+function toggleLeg(id) {
+  selLegs.has(id) ? selLegs.delete(id) : selLegs.add(id);
+  routedTrackPoints = null;
+  renderLegs();
+}
+
+// ── CREATE ROUTE ──────────────────────────────────────────────
+async function createRoute() {
+  const name = document.getElementById('newRouteName').value.trim() || 'VIA Chapter III — Ultima Thule';
+  const btn  = document.getElementById('createBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner w"></span> Creating...';
+
+  let trackPts;
+  if (routedTrackPoints && routedTrackPoints.length >= 2) {
+    const maxPts = 2000;
+    trackPts = routedTrackPoints.length > maxPts
+      ? routedTrackPoints.filter((_, i) => i % Math.ceil(routedTrackPoints.length / maxPts) === 0)
+      : routedTrackPoints;
+    showToast('Using road-routed track points...', 'info');
+  } else {
+    const seen = new Set(), basePts = [];
+    LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
+      l.wps.forEach(id => {
+        if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
+          seen.add(id); basePts.push(wpMap[id]);
+        }
+      })
+    );
+    trackPts = injectRoutingPins(basePts);
+    if (trackPts.length < 2) {
+      showToast('Select at least 2 waypoints (or run Preview first for road routing)', 'error');
+      btn.disabled = false; btn.innerHTML = '✚ Create on RideWithGPS'; return;
+    }
+    showToast('Tip: Run Preview first for a fully road-routed track!', 'info');
+  }
+
+  try {
+    const body = new URLSearchParams({
+      apikey: API_KEY, auth_token: authToken, version: '2',
+      'route[name]': name,
+      'route[description]': `VIA Chapter III Ultima Thule — Road-routed via OSRM. ${trackPts.length} track points. Race: 24 Jul–8 Aug 2026.`,
+      'route[track_points]': JSON.stringify(trackPts.map(w => ({ lat: w.lat, lng: w.lng }))),
+      'route[is_trip]': '0',
+      'route[visibility]': '0',
+    });
+    // Try legacy endpoint first, then v1 API
+    let r = await fetch(`${BASE}/routes.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    if (!r.ok) {
+      r = await fetch(`${BASE}/api/v1/routes.json`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+    }
+    const d = await r.json();
+    if (d.route && d.route.id) {
+      showToast(`"${name}" created! Opening...`, 'success');
+      window.open(`https://ridewithgps.com/routes/${d.route.id}`, '_blank');
+      await loadRoutes();
+      switchTab('routes');
+    } else {
+      throw new Error(JSON.stringify(d).slice(0, 200));
+    }
+  } catch(e) {
+    showToast(`Error: ${e.message}`, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '✚ Create on RideWithGPS';
+}
+
+// ── GPX ───────────────────────────────────────────────────────
+function downloadGPX() {
+  const name = document.getElementById('newRouteName').value.trim() || 'VIA Chapter III';
+  const seen = new Set(), basePts = [];
+  LEGS.filter(l => selLegs.has(l.id)).forEach(l =>
+    l.wps.forEach(id => {
+      if (!seen.has(id) && wpMap[id] && (GATE_TYPES.has(wpMap[id].type) || pinnedViaWps.has(id))) {
+        seen.add(id); basePts.push(wpMap[id]);
+      }
+    })
+  );
+  const pts = injectRoutingPins(basePts);
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const sym = {ferry:'Anchor', start:'Flag, Green', finish:'Flag, Red', refuge:'Campground', gate:'Waypoint'};
+  const wptXml = pts.map(w=>`  <wpt lat="${w.lat}" lon="${w.lng}">
+    <n>${esc(w.seq+' — '+w.name)}</n>
+    <desc>${esc(w.note)}</desc>
+    <type>${w.type}</type>
+    <sym>${sym[w.type]||'Waypoint'}</sym>
+  </wpt>`).join('\n');
+  let gpx, filename;
+  if (routedTrackPoints && routedTrackPoints.length >= 2) {
+    gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="VIA Race Planner — OSRM Road-Routed">\n  <metadata><n>${esc(name)}</n></metadata>\n${wptXml}\n  <trk><n>${esc(name)}</n><trkseg>\n${routedTrackPoints.map(p=>`    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}"></trkpt>`).join('\n')}\n  </trkseg></trk>\n</gpx>`;
+    filename = 'VIA_ChapterIII_road_routed.gpx';
+    showToast(`Road-routed GPX with ${routedTrackPoints.length} track points downloaded!`, 'success');
+  } else {
+    gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="VIA Race Planner">\n  <metadata><n>${esc(name)}</n></metadata>\n${wptXml}\n</gpx>`;
+    filename = 'VIA_ChapterIII_waypoints_only.gpx';
+    showToast(`Waypoints-only GPX downloaded. Run Preview first for a full routed track!`, 'info');
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([gpx], {type:'application/gpx+xml'}));
+  a.download = filename;
+  a.click();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id===`tab-${name}`));
+  document.querySelectorAll('.tab[id^="tab-btn-"]').forEach(t => t.classList.toggle('active', t.id===`tab-btn-${name}`));
+  // Also handle tabs without explicit IDs by their onclick
+  document.querySelectorAll('.tab:not([id])').forEach(t => {
+    const match = (t.getAttribute('onclick')||'').match(/switchTab\('(\w+)'\)/);
+    if (match) t.classList.toggle('active', match[1]===name);
+  });
+}
+function cp(text, msg) { navigator.clipboard.writeText(text).then(() => showToast(msg, 'info')); }
+let toastTimer;
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 4000);
+}
+
+// ── GPX FILE LOADER ───────────────────────────────────────────
+function loadGPXFile(event, routeName) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parser = new DOMParser();
+      const gpx    = parser.parseFromString(e.target.result, 'application/xml');
+
+      // Extract track points from <trkpt> or <rtept> elements
+      const trkpts = [...gpx.querySelectorAll('trkpt, rtept')];
+      if (!trkpts.length) {
+        showToast('No track points found in GPX file', 'error');
+        return;
+      }
+
+      const pts = trkpts.map(pt => ({
+        lat: parseFloat(pt.getAttribute('lat')),
+        lng: parseFloat(pt.getAttribute('lon')),
+      })).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
+
+      showToast(`GPX loaded — ${pts.length.toLocaleString()} track points`, 'success');
+
+      const result   = inspectRoute(pts);
+      const fakeRoute = { id: 0, distance: 0 };
+      const cp = document.getElementById('compliancePanel');
+      cp.style.display = 'block';
+      document.getElementById('mapAreaWrap').className = 'map-area split';
+
+      renderComplianceReport(cp, routeName + ' (GPX)', fakeRoute, pts, result);
+      renderRouteOnMap(routeName, pts, result);
+      updatePinRouteDistances(pts);
+
+      const vCount = result.violations.length;
+      const gMiss  = result.gatesMissed.length;
+      document.getElementById('detailBar').innerHTML = `
+        <h2>${routeName} <span style="font-size:11px;font-weight:400;opacity:0.6">(GPX)</span></h2>
+        ${vCount > 0 ? `<span class="badge red">⛔ ${vCount} VIOLATION${vCount!==1?'S':''}</span>` : ''}
+        ${gMiss  > 0 ? `<span class="badge amber">${gMiss} GATE${gMiss!==1?'S':''} MISSED</span>` : ''}
+        ${vCount === 0 && gMiss === 0 ? '<span class="badge green">✓ COMPLIANT</span>' : ''}`;
+
+    } catch(err) {
+      showToast('Could not parse GPX: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+
+// ── OFFICIAL RACE MAP TOGGLE ──────────────────────────────────
+const OFFICIAL_MAP_URL = 'https://www.google.com/maps/d/embed?mid=1ViwBu_vQsMQ3aMALsrIynLSTDilG5mg&ehbc=2E312F';
+let officialMapVisible = false;
+
+function toggleOfficialMap() {
+  const frame = document.getElementById('officialMapFrame');
+  const btn   = document.getElementById('kmlToggleBtn');
+  officialMapVisible = !officialMapVisible;
+  if (officialMapVisible) {
+    // Lazy-load the iframe src on first open
+    if (!frame.getAttribute('src')) frame.setAttribute('src', OFFICIAL_MAP_URL);
+    frame.style.display = 'block';
+    btn.classList.add('active');
+    btn.innerHTML = '✕ Close';
+    showToast('Loading official race map...', 'info');
+  } else {
+    frame.style.display = 'none';
+    btn.classList.remove('active');
+    btn.innerHTML = '🗺 Official Map';
+    // Invalidate Leaflet size since it was hidden under the iframe
+    if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 50);
+  }
+}
+
+
+// ── CAMPGROUNDS, WATER & TOILETS (Overpass API) ───────────────
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+];
+const POI_TILE_SIZE = 0.5;   // degrees — panning within a tile reuses cache
+const POI_TTL_MS   = 24 * 60 * 60 * 1000; // 24h
+
+// Race all endpoints — return whichever replies first successfully
+async function overpassFetch(query) {
+  return Promise.any(OVERPASS_ENDPOINTS.map(url =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'data=' + encodeURIComponent(query)
+    }).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+  ));
+}
+
+// Round bbox outward to 0.5° grid so nearby views share the same cache key
+function snapBBox(b) {
+  return {
+    south: Math.floor(b.getSouth() / POI_TILE_SIZE) * POI_TILE_SIZE,
+    west:  Math.floor(b.getWest()  / POI_TILE_SIZE) * POI_TILE_SIZE,
+    north: Math.ceil(b.getNorth()  / POI_TILE_SIZE) * POI_TILE_SIZE,
+    east:  Math.ceil(b.getEast()   / POI_TILE_SIZE) * POI_TILE_SIZE,
+  };
+}
+
+function poiCacheKey(s) { return `via_poi_${s.south}_${s.west}_${s.north}_${s.east}`; }
+
+function loadPoiTileCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (Date.now() - p.fetchedAt > POI_TTL_MS) { localStorage.removeItem(key); return null; }
+    return p.elements;
+  } catch(e) { return null; }
+}
+
+function savePoiTileCache(key, elements) {
+  try { localStorage.setItem(key, JSON.stringify({ fetchedAt: Date.now(), elements })); } catch(e) {}
+}
+let poiVisible = false;
+let poiCache = {};
+let poiAbortController = null;
+let poiRequestSeq = 0;
+
+function poiIcon(type) {
+  const cls = type === 'camp' ? 'poi-marker-camp'
+            : type === 'water' ? 'poi-marker-water'
+            : 'poi-marker-toilet';
+  return L.divIcon({ className: cls, iconSize: [12,12] });
+}
+
+function getPOILatLon(el) {
+  if (typeof el.lat === 'number' && typeof el.lon === 'number') return [el.lat, el.lon];
+  if (el.center && typeof el.center.lat === 'number' && typeof el.center.lon === 'number') return [el.center.lat, el.center.lon];
+  return null;
+}
+
+function resetPOIButtons() {
+  const btn = document.getElementById('poiBtn');
+  const refreshBtn = document.getElementById('poiRefreshBtn');
+  const loadingBadge = document.getElementById('poiLoadingBadge');
+  if (btn) {
+    btn.textContent = '⛺ Camps · 💧 Water · 🚽 Toilets';
+    btn.classList.remove('loading');
+    if (poiVisible) btn.classList.add('active');
+    else btn.classList.remove('active');
+  }
+  if (refreshBtn) {
+    refreshBtn.style.display = poiVisible ? 'block' : 'none';
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Refresh POIs';
+  }
+  if (loadingBadge) loadingBadge.style.display = 'none';
+}
+
+const POI_MIN_ZOOM = 10;
+
+async function loadPOI(forceRefresh = false) {
+  if (!leafletMap || !poiLayerGroup) return;
+
+  const btn = document.getElementById('poiBtn');
+  const refreshBtn = document.getElementById('poiRefreshBtn');
+
+  // Require minimum zoom to keep Overpass queries manageable
+  if (leafletMap.getZoom() < POI_MIN_ZOOM) {
+    poiLayerGroup.clearLayers();
+    if (btn) { btn.textContent = '🔍 Zoom in to load POIs (zoom ' + POI_MIN_ZOOM + '+)'; btn.classList.remove('loading'); btn.classList.add('active'); }
+    if (refreshBtn) refreshBtn.style.display = 'none';
+    return;
+  }
+
+  // Clear the "zoom in" hint now that zoom is sufficient
+  if (btn && btn.textContent.includes('Zoom in')) {
+    btn.textContent = '⏳ Loading POIs...';
+    btn.classList.add('loading');
+  }
+
+  const snap = snapBBox(leafletMap.getBounds());
+  const cacheKey = poiCacheKey(snap);
+  const bb = `${snap.south},${snap.west},${snap.north},${snap.east}`;
+  const requestId = ++poiRequestSeq;
+
+  if (btn) { btn.textContent = '⏳ Loading POIs...'; btn.classList.add('loading','active'); }
+  if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '⏳ Refreshing...'; refreshBtn.style.display = 'block'; }
+  const loadingBadge = document.getElementById('poiLoadingBadge');
+  if (loadingBadge) loadingBadge.style.display = 'block';
+
+  // Serve from cache (memory first, then localStorage)
+  if (!forceRefresh) {
+    if (poiCache[cacheKey]) { renderPOI(poiCache[cacheKey], requestId); return; }
+    const stored = loadPoiTileCache(cacheKey);
+    if (stored) { poiCache[cacheKey] = stored; renderPOI(stored, requestId); return; }
+  }
+
+  try {
+    // Campsites can be polygons — keep way/relation. Water/toilets/showers are almost always nodes.
+    const q = `[out:json][timeout:25];
+    (
+      node["tourism"="camp_site"](${bb});
+      way["tourism"="camp_site"](${bb});
+      relation["tourism"="camp_site"](${bb});
+      node["tourism"="caravan_site"](${bb});
+      way["tourism"="caravan_site"](${bb});
+      node["amenity"="drinking_water"](${bb});
+      node["amenity"="water_point"](${bb});
+      node["amenity"="toilets"](${bb});
+      node["amenity"="shower"](${bb});
+    );
+    out center body;`;
+
+    const d = await overpassFetch(q);
+    const elements = d.elements || [];
+    poiCache[cacheKey] = elements;
+    savePoiTileCache(cacheKey, elements);
+    renderPOI(elements, requestId);
+    if (elements.length === 0) showToast('No POIs found here — try zooming in further', 'info');
+  } catch(e) {
+    resetPOIButtons();
+    showToast('Could not load POIs: ' + (e.errors ? e.errors[0]?.message : e.message), 'error');
+  }
+}
+
+function renderPOI(elements, requestId) {
+  if (!poiVisible) {
+    resetPOIButtons();
+    return;
+  }
+  if (requestId && requestId !== poiRequestSeq) return;
+  if (!poiLayerGroup) return;
+
+  poiLayerGroup.clearLayers();
+  let c = { camp:0, water:0, toilet:0 };
+
+  for (const el of elements) {
+    const ll = getPOILatLon(el);
+    if (!ll) continue;
+
+    const [lat, lon] = ll;
+    const tags = el.tags || {};
+    let type = 'toilet';
+
+    if (tags.tourism === 'camp_site' || tags.tourism === 'caravan_site') type = 'camp';
+    else if (tags.amenity === 'drinking_water' || tags.amenity === 'water_point') type = 'water';
+
+    c[type]++;
+
+    const emoji = type === 'camp' ? '⛺' : type === 'water' ? '💧' : '🚽';
+    const label = type === 'camp' ? 'Campground' : type === 'water' ? 'Drinking Water' : 'Toilets';
+    const name = tags.name || label;
+    const fee = tags.fee === 'yes' ? ' · fee' : tags.fee === 'no' ? ' · free' : '';
+    const access = tags.access && tags.access !== 'yes' ? ` · access: ${tags.access}` : '';
+
+    L.marker([lat, lon], { icon: poiIcon(type) })
+      .bindPopup(`<div class="poi-popup">
+        <h4>${emoji} ${name}</h4>
+        <div class="type">${label}${fee}${access}</div>
+        <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank">Google Maps ↗</a>
+      </div>`)
+      .addTo(poiLayerGroup);
+  }
+
+  const btn = document.getElementById('poiBtn');
+  const refreshBtn = document.getElementById('poiRefreshBtn');
+  if (btn) {
+    btn.textContent = `⛺ ${c.camp} · 💧 ${c.water} · 🚽 ${c.toilet}`;
+    btn.classList.remove('loading');
+    btn.classList.add('active');
+  }
+  if (refreshBtn) {
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Refresh POIs';
+    refreshBtn.style.display = 'block';
+  }
+  const loadingBadge = document.getElementById('poiLoadingBadge');
+  if (loadingBadge) loadingBadge.style.display = 'none';
+  showToast(`${c.camp} camps · ${c.water} water · ${c.toilet} toilets`, 'success');
+}
+
+function togglePOI() {
+  if (!leafletMap || !poiLayerGroup) {
+    showToast('Map not ready yet', 'error');
+    return;
+  }
+
+  poiVisible = !poiVisible;
+  if (poiVisible) {
+    loadPOI(false);
+  } else {
+    if (poiAbortController) {
+      try { poiAbortController.abort(); } catch (e) {}
+    }
+    poiLayerGroup.clearLayers();
+    resetPOIButtons();
+  }
+}
+
+function refreshPOI() {
+  if (!poiVisible) {
+    showToast('Turn POIs on first', 'info');
+    return;
+  }
+  loadPOI(true);
+}
+
+let poiMoveTimer = null;
+function setupPOIMapListener() {
+  if (!leafletMap) return;
+  leafletMap.on('zoomend', () => {
+    // Restore route polylines if cleared
+    if (savedRouteSegments.length && routeLayerGroup) {
+      const layers = [];
+      routeLayerGroup.eachLayer(l => layers.push(l));
+      if (layers.length === 0) {
+        savedRouteSegments.forEach(seg =>
+          L.polyline(seg.latlngs, seg.options).addTo(routeLayerGroup)
+        );
+      }
+    }
+    if (poiVisible) {
+      clearTimeout(poiMoveTimer);
+      poiMoveTimer = setTimeout(() => loadPOI(false), 400);
+    }
+  });
+  leafletMap.on('moveend', () => {
+    if (poiVisible) {
+      clearTimeout(poiMoveTimer);
+      poiMoveTimer = setTimeout(() => loadPOI(false), 400);
+    }
+  });
+}
+
+// ── SERVICE WORKER (PWA offline support) ─────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+init();
+</script>
+</body>
+</html>
