@@ -2126,7 +2126,6 @@ function selectWp(i) {
   if (selRoute) {
     document.getElementById('compliancePanel').style.display = 'none';
     document.getElementById('mapAreaWrap').className = 'map-area full';
-    routeLayerGroup.clearLayers();
   }
   setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
 
@@ -2345,20 +2344,20 @@ function downloadGPX() {
   );
   const pts = injectRoutingPins(basePts);
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const sym = {ferry:'Anchor', start:'Flag, Green', finish:'Flag, Red', refuge:'Campground', gate:'Waypoint'};
+  const sym = {ferry:'Anchor', start:'Flag, Green', finish:'Flag, Red', refuge:'Campground', gate:'Waypoint', pin:'Pin'};
   const wptXml = pts.map(w=>`  <wpt lat="${w.lat}" lon="${w.lng}">
-    <n>${esc(w.seq+' — '+w.name)}</n>
-    <desc>${esc(w.note)}</desc>
+    <name>${esc(w.seq ? w.seq+' \u2014 '+w.name : w.name)}</name>
+    <desc>${esc(w.note||w.name||'')}</desc>
     <type>${w.type}</type>
     <sym>${sym[w.type]||'Waypoint'}</sym>
   </wpt>`).join('\n');
   let gpx, filename;
   if (routedTrackPoints && routedTrackPoints.length >= 2) {
-    gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="VIA Race Planner — OSRM Road-Routed">\n  <metadata><n>${esc(name)}</n></metadata>\n${wptXml}\n  <trk><n>${esc(name)}</n><trkseg>\n${routedTrackPoints.map(p=>`    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}"></trkpt>`).join('\n')}\n  </trkseg></trk>\n</gpx>`;
+    gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="VIA Race Planner \u2014 OSRM Road-Routed">\n  <metadata><name>${esc(name)}</name></metadata>\n${wptXml}\n  <trk><name>${esc(name)}</name><trkseg>\n${routedTrackPoints.map(p=>`    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}"></trkpt>`).join('\n')}\n  </trkseg></trk>\n</gpx>`;
     filename = 'VIA_ChapterIII_road_routed.gpx';
     showToast(`Road-routed GPX with ${routedTrackPoints.length} track points downloaded!`, 'success');
   } else {
-    gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="VIA Race Planner">\n  <metadata><n>${esc(name)}</n></metadata>\n${wptXml}\n</gpx>`;
+    gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="VIA Race Planner">\n  <metadata><name>${esc(name)}</name></metadata>\n${wptXml}\n</gpx>`;
     filename = 'VIA_ChapterIII_waypoints_only.gpx';
     showToast(`Waypoints-only GPX downloaded. Run Preview first for a full routed track!`, 'info');
   }
