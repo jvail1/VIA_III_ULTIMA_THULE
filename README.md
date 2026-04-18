@@ -38,19 +38,7 @@ Built on [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletjs.
 
 ## Getting Started
 
-### Option 1 — Open directly in your browser
-Download `via_chapter3_planner.html` and open it. No server, no dependencies, no install.
-
-### Option 2 — Serve locally
-```bash
-python3 -m http.server 8000
-# then open http://localhost:8000/via_chapter3_planner.html
-```
-
-### Option 3 — GitHub Pages
-1. Fork or clone this repo
-2. Go to **Settings → Pages → Branch: main / root**
-3. Your planner will be live at `https://yourusername.github.io/repo-name/via_chapter3_planner.html`
+Open the app directly in your browser — no install, no server, no dependencies.
 
 ---
 
@@ -175,4 +163,4 @@ README.md                   # this file
 
 ## Credits
 
-Race organised by [VIA](https://viarace.cc). Route data sourced from the official race KML and compendium (October 2025). Routing powered by [OSRM](https://project-osrm.org) and [OpenStreetMap](https://www.openstreetmap.org) contributors.
+Race organised by [VIA](https://via-race.com/). Route data sourced from the official race KML and compendium (October 2025). Routing powered by [OSRM](https://project-osrm.org) and [OpenStreetMap](https://www.openstreetmap.org) contributors.

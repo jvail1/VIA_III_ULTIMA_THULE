@@ -180,9 +180,9 @@
   .poi-btn:hover { border-color:#4caf50; color:#4caf50; }
   .poi-btn.active { background:#2a7a3b; border-color:#2a7a3b; color:white; }
   .poi-btn.loading { background:#333; border-color:#555; color:#888; cursor:wait; }
-  .poi-marker-camp  { background:#2a7a3b; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
-  .poi-marker-water { background:#1a5c8a; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
-  .poi-marker-toilet{ background:#b8860b; border:2px solid white; border-radius:50%; width:10px!important; height:10px!important; margin:-5px 0 0 -5px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-marker-camp  { background:#2a7a3b; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-marker-water { background:#1a5c8a; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .poi-marker-toilet{ background:#b8860b; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; box-shadow:0 1px 4px rgba(0,0,0,0.5); }
   .poi-popup h4 { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; margin-bottom:3px; }
   .poi-popup .type { font-size:10px; font-family:'DM Mono',monospace; opacity:0.7; margin-bottom:4px; }
   .poi-popup a { font-size:11px; color:var(--accent2); }
@@ -404,7 +404,7 @@
   .marker-wp.start{background:#0f0f0f;font-size:8px}.marker-wp.finish{background:#c8410a;font-size:8px}
   .marker-wp.gate{background:#1a5c8a}.marker-wp.refuge{background:#2a7a3b;font-size:13px}.marker-wp.ferry{background:#6b4a1a;font-size:13px}
 
-  .leaflet-violation-icon { background:var(--accent); border:2px solid white; border-radius:50%; width:14px!important; height:14px!important; margin:-7px 0 0 -7px!important; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
+  .leaflet-violation-icon { background:var(--accent); border:2px solid white; border-radius:50%; width:14px!important; height:14px!important; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
   .leaflet-gate-hit-icon { background:var(--green); border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; }
   .leaflet-gate-miss-icon { background:#ccc; border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; }
   .leaflet-start-icon { background:var(--ink); border:2px solid white; border-radius:50%; width:16px!important; height:16px!important; margin:-8px 0 0 -8px!important; }
@@ -414,7 +414,7 @@
   .violation-popup a { font-size:11px; color:var(--accent2); }
 
   /* ── USER PINS ── */
-  .leaflet-user-pin-icon { background:#7c3aed; border:2px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); width:16px!important; height:16px!important; margin:-14px 0 0 -8px!important; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  .leaflet-user-pin-icon { background:#7c3aed; border:2px solid white; border-radius:50% 50% 50% 0; transform:rotate(-45deg); width:16px!important; height:16px!important; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
   #addPinBtn {
     position: absolute; bottom: 30px; left: 10px; z-index: 470;
     font-family: 'DM Mono', monospace; font-size: 11px;
@@ -1818,7 +1818,7 @@ function renderUserPins() {
   if (!userPinLayerGroup) return;
   userPinLayerGroup.clearLayers();
 
-  const icon = L.divIcon({ className: 'leaflet-user-pin-icon', iconSize: [16, 16] });
+  const icon = L.divIcon({ className: 'leaflet-user-pin-icon', iconSize: [16, 16], iconAnchor: [8, 16], html: '' });
 
   for (const pin of userPins) {
     const marker = L.marker([pin.lat, pin.lng], { icon, title: pin.name });
@@ -2084,7 +2084,7 @@ function renderRouteOnMap(routeName, pts, result) {
 
   // Violation markers (red)
   for (const v of result.violations) {
-    const icon = L.divIcon({ className: 'leaflet-violation-icon', iconSize: [14,14] });
+    const icon = L.divIcon({ className: 'leaflet-violation-icon', iconSize: [14,14], iconAnchor: [7,7], html: '' });
     L.marker([v.lat, v.lng], { icon })
       .bindPopup(`<div class="violation-popup"><h4>⛔ ${v.name}</h4><p>${v.note}</p><br><a href="https://ridewithgps.com/routes/new?start_lat=${v.closestPt.lat}&start_lng=${v.closestPt.lng}" target="_blank">Reroute from here ↗</a></div>`)
       .addTo(routeLayerGroup);
@@ -2557,7 +2557,7 @@ function poiIcon(type) {
   const cls = type === 'camp' ? 'poi-marker-camp'
             : type === 'water' ? 'poi-marker-water'
             : 'poi-marker-toilet';
-  return L.divIcon({ className: cls, iconSize: [12,12] });
+  return L.divIcon({ className: cls, iconSize: [12,12], iconAnchor: [6,6], html: '' });
 }
 
 function getPOILatLon(el) {
@@ -2810,18 +2810,7 @@ Built on [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletjs.
 
 ## Getting Started
 
-### Option 1 \u2014 Open directly in your browser
-Download the HTML file and open it. No server, no dependencies, no install.
-
-### Option 2 \u2014 Serve locally
-\`\`\`bash
-python3 -m http.server 8000
-\`\`\`
-
-### Option 3 \u2014 GitHub Pages
-1. Fork or clone this repo
-2. Go to **Settings \u2192 Pages \u2192 Branch: main / root**
-3. Your planner will be live at your GitHub Pages URL
+Open the app directly in your browser \u2014 no install, no server, no dependencies.
 
 ---
 
@@ -2918,7 +2907,7 @@ No data is sent to any server other than ridewithgps.com and router.project-osrm
 
 ## Credits
 
-Race organised by [VIA](https://viarace.cc). Route data sourced from the official race KML and compendium (October 2025). Routing powered by [OSRM](https://project-osrm.org) and [OpenStreetMap](https://www.openstreetmap.org) contributors.`;
+Race organised by [VIA](https://via-race.com/). Route data sourced from the official race KML and compendium (October 2025). Routing powered by [OSRM](https://project-osrm.org) and [OpenStreetMap](https://www.openstreetmap.org) contributors.`;
 
 let readmeLoaded = false;
 function openReadme() {
