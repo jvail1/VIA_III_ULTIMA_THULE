@@ -2770,14 +2770,162 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── README MODAL ──────────────────────────────────────────────
+const BUNDLED_README = `# VIA Chapter III \u2014 Ultima Thule Route Planner
+
+A single-file web application for planning and compliance-checking routes for the **VIA Chapter III \u2014 Ultima Thule** ultra-distance cycling race (Amerongen, Netherlands \u2192 Volda, Norway, ~4,000km, 24 July\u20138 August 2026).
+
+Built on [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletjs.com), and [OSRM](https://project-osrm.org).
+
+---
+
+## Features
+
+### \u1f5fa Live Map
+- Interactive Leaflet map with all 26 waypoints (gates, ferries, refuge, start/finish) shown as labelled markers
+- Dashed orange **recommended route overlay** for all 9 legs, toggleable from the map legend
+- Map splits into a top/bottom view when a compliance report is open
+
+### \u1f6b4 My Routes \u2014 Compliance Inspector
+- Loads all your RideWithGPS routes (paginated, handles large libraries)
+- Fetches full track geometry via the RWGPS API and runs a compliance check against:
+  - **15 banned tunnels** (Laerdalstunnelen, Gudvangatunnelen, Innfjordtunnelen, and 12 others)
+  - **6 banned road sections** (E39 Vassenden\u2013Skei, E6 Sel\u2013Domb\u00e5s, and others)
+  - **17 banned ferries** (\u00d8resund bridge, Hirtshals, G\u00f6teborg, Malm\u00f6, Oslo, Kiel, and others)
+  - **18 mandatory gate proximity checks** (400\u2013500m radius per gate)
+  - **30 recommended corridor checkpoints** grouped by leg with efficiency notes
+- Compliance report shows: violation count, gates missed/hit, routing advisories, full gate coverage grid
+- Violations pinned on map with one-click "Reroute from here \u2197" links to RideWithGPS
+- **GPX upload fallback** \u2014 if the API blocks private route data, export from RWGPS and upload locally (nothing is sent anywhere)
+- Manual route inspection by ID if route list fails to load
+
+### \u271a Create \u2014 Road-Routed Planning
+- Select any combination of the 9 race legs
+- **Preview on Road Network** \u2014 routes each land segment via the OSRM public cycling API, showing actual cycling roads colour-coded by leg
+- Ferry crossings shown as dashed lines (OSRM correctly skips water)
+- Progress overlay with per-segment status during routing
+- Push the completed route directly to your RideWithGPS account (up to 2,000 track points)
+- Download as **road-routed GPX** (full track + waypoints) or waypoints-only GPX
+
+---
+
+## Getting Started
+
+### Option 1 \u2014 Open directly in your browser
+Download the HTML file and open it. No server, no dependencies, no install.
+
+### Option 2 \u2014 Serve locally
+\`\`\`bash
+python3 -m http.server 8000
+\`\`\`
+
+### Option 3 \u2014 GitHub Pages
+1. Fork or clone this repo
+2. Go to **Settings \u2192 Pages \u2192 Branch: main / root**
+3. Your planner will be live at your GitHub Pages URL
+
+---
+
+## Login
+
+Sign in with your **RideWithGPS** email and password. Credentials are sent directly to ridewithgps.com \u2014 this app never sees or stores them. Only the returned auth_token is saved in your browser's localStorage for the session.
+
+---
+
+## Race Rules Encoded
+
+### Banned tunnels (15)
+| Tunnel | Location | Alternative |
+|---|---|---|
+| Laerdalstunnelen | Near Borgund | Rv50 Filefjell mountain road |
+| Gudvangatunnelen | Near Fl\u00e5m | Stalheimskleiva old road |
+| Innfjordtunnelen | Near \u00c5ndalsnes | Rv63 from north |
+| Hellesylt tunnel | Sunnm\u00f8re | Southbound only permitted |
+| Flenjatunnelen | L\u00e6rdal corridor | Overground roads |
+| Eiksund tunnel | Volda/\u00d8rsta | Lote\u2013Anda, Fest\u00f8ya, Lauvstad\u2013Volda ferries |
+| Rotsethorntunnelen | Volda | Ferry chain |
+| Hjart\u00e5bergtunnelen | Volda | Ferry chain |
+| Oppljostunnelen | Strynefjellsveg | Gamle Strynefjellsveg |
+| Kvivstunnelen | Gaularfjellet | Old mountain road |
+| Fodnestunnelen | Urnes/Solvorn | Overground road via Gaupne |
+| Amlatunnelen | Urnes/Solvorn | Overground roads |
+| Morkaaastunnelen | Volda | Ferry chain |
+| Selv\u00e5gtunnelen | \u00d8rsta/Volda | Lote\u2013Anda \u2192 Fest\u00f8ya \u2192 Lauvstad\u2013Volda |
+| Tunnel near Dovre | Domb\u00e5s | Rv15 or valley roads |
+
+### Banned road sections (6)
+- E39 Vassenden\u2013Skei \u2192 use Fv13 (Gaularfjellet)
+- E39 Sandane section \u2192 use Fv60/Fv615
+- E6 Sel\u2013Domb\u00e5s \u2192 use Rv15 via Otta or Rv27
+- E39 \u00d8rstavegen (Volda) \u2192 arrive via Lauvstad\u2013Volda ferry
+- E39 Voldavegen section \u2192 arrive via ferry chain
+- E39 from Fest\u00f8ya \u2192 use Fest\u00f8ya then Lauvstad\u2013Volda ferry
+
+### Banned crossings (17)
+All DK\u2192SE crossings except **Helsing\u00f8r\u2013Helsingborg ferry** are banned (\u00d8resund bridge, Malm\u00f6, Trelleborg, Ystad, G\u00f6teborg, Hirtshals). Also banned: Rostock\u2013Gedser, Travemund\u00e4, Kiel, Oslo, Str\u00f6mstad\u2013Sandefjord, Bergen fast boat, and several Norwegian fjord ferries.
+
+### Mandatory gates (16 + start/finish)
+S \u00b7 I \u00b7 II \u00b7 III \u00b7 IV \u00b7 V \u00b7 VI \u00b7 VII \u00b7 VIII \u00b7 IX \u00b7 X \u00b7 XI \u00b7 XII \u00b7 XIII \u00b7 XIV \u00b7 XV \u00b7 XVI \u00b7 F
+
+---
+
+## Route Structure
+
+| Leg | Section | Distance |
+|---|---|---|
+| L1 | Start (Amerongen) \u2192 Gate I (Brocken, 1,141m) | ~480km |
+| L2 | Brocken \u2192 Gate II (Fredriksten) via Denmark & Sweden | ~620km |
+| L3 | Gate II \u2192 Gate III (Suleskard, 1,050m) + Refuge | ~380km |
+| L4 | Gate IV (Lysebotn) + Lysebotn\u2013Forsand ferry | ~60km |
+| L5 | Gate V (V\u00f8ringsfossen) \u00b7 IX (Borgund) \u00b7 X (Urnes) \u00b7 XI (Lom) | ~420km |
+| L6 | Gate VI (Sognefjellet, 1,434m) \u00b7 VII (Gaularfjellet) \u00b7 VIII (Strynefjellsveg) | ~280km |
+| L7 | Gate XIV (Dalsnibba, 1,476m) \u00b7 XIII (Trollstigen) \u00b7 XII (Sv\u00f8ufallet) | ~310km |
+| L8 | Gate XV (Atlantic Ocean Road) | ~80km |
+| L9 | Gate XVI (Vestkapp) \u2192 Finish (Volda) via ferry chain | ~120km |
+
+---
+
+## Permitted Ferries
+
+| Ferry | Notes |
+|---|---|
+| Puttgarden\u2013R\u00f8dby | DE\u2192DK, ~45 min, walk-on |
+| Helsing\u00f8r\u2013Helsingborg | **Only** permitted DK\u2192SE crossing, 20 min, every 20 min |
+| Lysebotn\u2013Forsand | Book in advance \u2014 sells out Jul/Aug. billetter.kolumbus.no |
+| Solvorn\u2013Ornes | For Urnes Stave Church (Gate X), ~15 min walk-on |
+| Molde\u2013Vestnes | Crosses Romsdalsfjord |
+| Linge\u2013Eidsdal | After Trollstigen |
+| Lote\u2013Anda | Crosses Nordfjord, avoids all banned E39 tunnels near Volda |
+| Fest\u00f8ya | ~20 min, frequent |
+| Lauvstad\u2013Volda | Final ferry into the finish |
+
+---
+
+## Key Dates
+
+| Date | Event |
+|---|---|
+| 23 July 2026 | Sign-on 09:00\u201317:00, community meal 19:00 |
+| 24 July 2026 | Race start 07:00, De Proloog, Amerongen NL |
+| 8 August 2026 | Finish celebration 20:00, Volda NO |
+
+---
+
+## Privacy
+
+No data is sent to any server other than ridewithgps.com and router.project-osrm.org. GPX upload for compliance checking runs entirely in-browser. Only the RWGPS auth_token is persisted (in localStorage).
+
+---
+
+## Credits
+
+Race organised by [VIA](https://viarace.cc). Route data sourced from the official race KML and compendium (October 2025). Routing powered by [OSRM](https://project-osrm.org) and [OpenStreetMap](https://www.openstreetmap.org) contributors.`;
+
 let readmeLoaded = false;
 function openReadme() {
   document.getElementById('readmeModal').classList.add('open');
   if (readmeLoaded) return;
-  fetch('README.md')
-    .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
-    .then(md => { document.getElementById('readmeContent').innerHTML = mdToHtml(md); readmeLoaded = true; })
-    .catch(() => { document.getElementById('readmeContent').innerHTML = '<div class="loading">README not available in this context.</div>'; });
+  document.getElementById('readmeContent').innerHTML = mdToHtml(BUNDLED_README);
+  readmeLoaded = true;
 }
 function closeReadme() {
   document.getElementById('readmeModal').classList.remove('open');
