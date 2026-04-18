@@ -583,6 +583,10 @@
       <div class="detail-bar" id="detailBar">
         <h2 id="detailTitle" data-i18n="detail_default">Select a route to inspect</h2>
       </div>
+      <div id="gateToggles" style="display:none;padding:4px 10px;background:#f0ebe3;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-shrink:0">
+        <button id="togglePhotoBtn" onclick="toggleGatePhoto()" style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:3px;cursor:pointer;border:1px solid #bbb;background:white;color:#555;transition:all .15s">📷 Photo</button>
+        <button id="toggleWeatherBtn" onclick="toggleGateWeather()" style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:3px;cursor:pointer;border:1px solid #bbb;background:white;color:#555;transition:all .15s">⛅ Weather</button>
+      </div>
 
       <div id="gatePhotoBar" style="display:none;height:140px;flex-shrink:0;overflow:hidden;position:relative;background:#111">
         <img id="gatePhotoImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;opacity:0.85"
@@ -2172,10 +2176,12 @@ function renderWaypoints() {
     </div>`).join('');
 }
 
+let currentWp = null;
 function selectWp(i) {
   selWp = i;
   renderWaypoints();
   const wp = WPS[i];
+  currentWp = wp;
 
   // Only collapse compliance panel if an inspected RWGPS route is active
   if (selRoute) {
@@ -2191,11 +2197,20 @@ function selectWp(i) {
   }).join('');
   document.getElementById('detailBar').innerHTML = `<h2>${wp.name}</h2>${badges}`;
 
+  // Show toggle bar
+  const hasPhoto = !!wp.photo;
+  const hasWeather = ['gate', 'start', 'finish', 'refuge'].includes(wp.type);
+  const toggleBar = document.getElementById('gateToggles');
+  toggleBar.style.display = (hasPhoto || hasWeather) ? 'flex' : 'none';
+  document.getElementById('togglePhotoBtn').style.display = hasPhoto ? 'inline-block' : 'none';
+  document.getElementById('toggleWeatherBtn').style.display = hasWeather ? 'inline-block' : 'none';
+  updateGateToggleBtns();
+
   // Show photo if available — only reveal bar after image loads to avoid black flash
   const photoBar = document.getElementById('gatePhotoBar');
   const photoImg = document.getElementById('gatePhotoImg');
   photoBar.style.display = 'none';
-  if (wp.photo) {
+  if (hasPhoto && gatePhotoOn) {
     photoImg.onload  = () => { photoBar.style.display = 'block'; };
     photoImg.onerror = () => { photoBar.style.display = 'none'; };
     photoImg.src = wp.photo;
@@ -2204,7 +2219,7 @@ function selectWp(i) {
   }
 
   // Show weather for gates, start, and finish
-  if (['gate', 'start', 'finish', 'refuge'].includes(wp.type)) {
+  if (hasWeather && gateWeatherOn) {
     showGateWeather(wp.lat, wp.lng);
   } else {
     document.getElementById('weatherBar').style.display = 'none';
@@ -2568,6 +2583,38 @@ function loadPoiTileCache(key) {
 function savePoiTileCache(key, elements) {
   try { localStorage.setItem(key, JSON.stringify({ fetchedAt: Date.now(), elements })); } catch(e) {}
 }
+let gatePhotoOn   = localStorage.getItem('via_gate_photo')   !== 'false';
+let gateWeatherOn = localStorage.getItem('via_gate_weather') !== 'false';
+
+function updateGateToggleBtns() {
+  const pb = document.getElementById('togglePhotoBtn');
+  const wb = document.getElementById('toggleWeatherBtn');
+  if (pb) { pb.style.background = gatePhotoOn   ? '#1a5c8a' : 'white'; pb.style.color = gatePhotoOn   ? 'white' : '#555'; pb.style.borderColor = gatePhotoOn   ? '#1a5c8a' : '#bbb'; }
+  if (wb) { wb.style.background = gateWeatherOn ? '#1a5c8a' : 'white'; wb.style.color = gateWeatherOn ? 'white' : '#555'; wb.style.borderColor = gateWeatherOn ? '#1a5c8a' : '#bbb'; }
+}
+
+function toggleGatePhoto() {
+  gatePhotoOn = !gatePhotoOn;
+  localStorage.setItem('via_gate_photo', gatePhotoOn);
+  updateGateToggleBtns();
+  const photoBar = document.getElementById('gatePhotoBar');
+  if (!gatePhotoOn) { photoBar.style.display = 'none'; }
+  else if (currentWp && currentWp.photo) {
+    const img = document.getElementById('gatePhotoImg');
+    img.onload = () => { photoBar.style.display = 'block'; };
+    img.onerror = () => { photoBar.style.display = 'none'; };
+    img.src = currentWp.photo;
+  }
+}
+
+function toggleGateWeather() {
+  gateWeatherOn = !gateWeatherOn;
+  localStorage.setItem('via_gate_weather', gateWeatherOn);
+  updateGateToggleBtns();
+  if (!gateWeatherOn) { document.getElementById('weatherBar').style.display = 'none'; }
+  else if (currentWp && ['gate','start','finish','refuge'].includes(currentWp.type)) { showGateWeather(currentWp.lat, currentWp.lng); }
+}
+
 let poiVisible = false;
 let poiCache = {};
 let poiAbortController = null;
