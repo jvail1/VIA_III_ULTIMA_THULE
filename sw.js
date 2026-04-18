@@ -1,12 +1,13 @@
 // VIA Chapter III — Service Worker
 // Caches app shell + map tiles for offline use
 
-const CACHE_NAME = 'via-chapter3-v2';
-const TILE_CACHE = 'via-tiles-v2';
+const CACHE_NAME = 'via-chapter3-v3';
+const TILE_CACHE = 'via-tiles-v3';
 
 // App shell — cache on install
 const SHELL = [
-  './via_chapter3_planner.html',
+  './via_III_planner_race.html',
+  './README.md',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -71,6 +72,17 @@ self.addEventListener('fetch', e => {
   // RWGPS API + OSRM — network only (needs live data)
   if (url.hostname.includes('ridewithgps') || url.hostname.includes('osrm')) {
     e.respondWith(fetch(e.request));
+    return;
+  }
+
+  // HTML + README — network first so updates are always picked up, cache as offline fallback
+  if (url.pathname.endsWith('.html') || url.pathname.endsWith('README.md')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
     return;
   }
 
