@@ -2660,8 +2660,15 @@ async function loadPOI(forceRefresh = false) {
     renderPOI(elements, requestId);
     if (elements.length === 0) showToast('No POIs found here — try zooming in further', 'info');
   } catch(e) {
-    resetPOIButtons();
-    showToast('Could not load POIs: ' + (e.errors ? e.errors[0]?.message : e.message), 'error');
+    const msgs = e.errors ? e.errors.map(x => x.message) : [e.message];
+    const is504 = msgs.some(m => m.includes('504') || m.includes('timeout') || m.includes('Gateway'));
+    const btn = document.getElementById('poiBtn');
+    const refreshBtn = document.getElementById('poiRefreshBtn');
+    const loadingBadge = document.getElementById('poiLoadingBadge');
+    if (loadingBadge) loadingBadge.style.display = 'none';
+    if (btn) { btn.textContent = is504 ? '⚠️ POI servers busy' : '⚠️ POIs failed'; btn.classList.remove('loading'); btn.classList.add('active'); }
+    if (refreshBtn) { refreshBtn.style.display = 'block'; refreshBtn.disabled = false; refreshBtn.textContent = '↻ Try again'; }
+    showToast(is504 ? 'Overpass servers busy — wait a moment then tap ↻ Try again' : 'Could not load POIs: ' + msgs[0], 'error');
   }
 }
 
