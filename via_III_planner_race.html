@@ -355,33 +355,74 @@
   .help-btn { background: none; border: 1px solid #444; color: #888; font-family: 'DM Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 3px; cursor: pointer; transition: all 0.15s; margin-left: 6px; }
   .help-btn:hover { border-color: #888; color: #ccc; }
 
-  /* ── README MODAL ── */
-  #readmeModal { display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.75); align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
-  #readmeModal.open { display: flex; }
-  .readme-box { background: var(--paper); border-radius: 6px; max-width: 780px; width: 100%; padding: 36px 40px 40px; position: relative; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
-  .readme-close { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); line-height: 1; }
-  .readme-close:hover { color: var(--ink); }
-  .readme-box h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
-  .readme-box h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin: 28px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
-  .readme-box h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 18px 0 8px; color: var(--muted); }
-  .readme-box p { font-size: 13px; line-height: 1.65; margin-bottom: 10px; color: #2a2520; }
-  .readme-box ul, .readme-box ol { padding-left: 20px; margin-bottom: 10px; }
-  .readme-box li { font-size: 13px; line-height: 1.6; color: #2a2520; margin-bottom: 3px; }
-  .readme-box code { font-family: 'DM Mono', monospace; font-size: 11px; background: #ede8de; padding: 1px 5px; border-radius: 3px; }
-  .readme-box pre { background: #1e1a14; color: #e8e0d0; border-radius: 4px; padding: 14px 16px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.6; overflow-x: auto; margin-bottom: 12px; }
-  .readme-box pre code { background: none; padding: 0; color: inherit; }
-  .readme-box table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; }
-  .readme-box th { background: #ede8de; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; padding: 6px 10px; text-align: left; border: 1px solid var(--border); }
-  .readme-box td { padding: 6px 10px; border: 1px solid var(--border); vertical-align: top; }
-  .readme-box strong { font-weight: 600; }
-  .readme-box a { color: var(--accent2); text-decoration: none; }
-  .readme-box a:hover { text-decoration: underline; }
-  .readme-box hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-  #readmeContent .loading { color: var(--muted); font-size: 13px; padding: 40px 0; text-align: center; }
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-</style>
+ // ── README MODAL ──────────────────────────────────────────────
+let readmeLoaded = false;
+let readmeHtmlCache = '';
+
+async function openReadme() {
+  document.getElementById('readmeModal').classList.add('open');
+  const content = document.getElementById('readmeContent');
+
+  if (readmeLoaded && readmeHtmlCache) {
+    content.innerHTML = readmeHtmlCache;
+    return;
+  }
+
+  content.innerHTML = '<div class="loading">Loading…</div>';
+
+  try {
+    const res = await fetch('./README.md?ts=' + Date.now(), {
+      cache: 'no-store'
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const md = await res.text();
+    readmeHtmlCache = mdToHtml(md);
+    content.innerHTML = readmeHtmlCache;
+    readmeLoaded = true;
+  } catch (err) {
+    content.innerHTML = `<p>Could not load README.md (${err.message}).</p>`;
+  }
+}
+
+function closeReadme() {
+  document.getElementById('readmeModal').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReadme(); });
+
+function mdToHtml(md) {
+  const codeBlocks = [];
+  md = md.replace(/```[\s\S]*?```/g, m => {
+    const inner = m.slice(m.indexOf('\n')+1, m.lastIndexOf('```')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    codeBlocks.push(`<pre><code>${inner}</code></pre>`);
+    return `\x00CODE${codeBlocks.length-1}\x00`;
+  });
+  md = md.replace(/`([^`]+)`/g, (_, c) => `<code>${c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code>`);
+  md = md.replace(/^\|.+\|[\s\S]*?(?=\n\n|\n#|$)/gm, t => {
+    const rows = t.trim().split('\n').filter(r => !/^\|[-:| ]+\|$/.test(r.trim()));
+    return '<table>' + rows.map((r, i) => {
+      const cells = r.split('|').slice(1,-1).map(c => c.trim());
+      const tag = i === 0 ? 'th' : 'td';
+      return '<tr>' + cells.map(c => `<${tag}>${c}</${tag}>`).join('') + '</tr>';
+    }).join('') + '</table>';
+  });
+  md = md.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  md = md.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  md = md.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  md = md.replace(/^---$/gm, '<hr>');
+  md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  md = md.replace(/((?:^- .+\n?)+)/gm, m => '<ul>' + m.trim().split('\n').map(l => `<li>${l.slice(2)}</li>`).join('') + '</ul>');
+  md = md.split(/\n{2,}/).map(block => {
+    block = block.trim();
+    if (!block || /^<(h[1-6]|ul|ol|table|pre|hr)/.test(block) || block.startsWith('\x00CODE')) return block;
+    return `<p>${block.replace(/\n/g,' ')}</p>`;
+  }).join('\n');
+  codeBlocks.forEach((b, i) => { md = md.replace(`\x00CODE${i}\x00`, b); });
+  return md;
+}
 
 <style>
   #leafletMap { width:100%; height:100%; }
@@ -2909,13 +2950,6 @@ No data is sent to any server other than ridewithgps.com and router.project-osrm
 
 Race organised by [VIA](https://via-race.com/). Route data sourced from the official race KML and compendium (October 2025). Routing powered by [OSRM](https://project-osrm.org) and [OpenStreetMap](https://www.openstreetmap.org) contributors.`;
 
-let readmeLoaded = false;
-function openReadme() {
-  document.getElementById('readmeModal').classList.add('open');
-  if (readmeLoaded) return;
-  document.getElementById('readmeContent').innerHTML = mdToHtml(BUNDLED_README);
-  readmeLoaded = true;
-}
 function closeReadme() {
   document.getElementById('readmeModal').classList.remove('open');
 }
