@@ -34,7 +34,7 @@ Built on [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletjs.
 - Push the completed route directly to your RideWithGPS account (up to 2,000 track points)
 - Download as **road-routed GPX** (full `<trk>` track + `<wpt>` waypoints) or waypoints-only GPX
 
-### ✚ POI's Overalay of water, campgrounds and restrooms.
+### ✚ POI's Overlay of water, campgrounds and restrooms.
 - Zoom in on map and toggle on POI's menu.
 - Water sources, campgrounds and restrooms will populate and adjust based on zoom level. POI popups include Google maps links for further inspection.
 
