@@ -2645,19 +2645,13 @@ async function loadPOI(forceRefresh = false) {
 
   try {
     // Campsites can be polygons — keep way/relation. Water/toilets/showers are almost always nodes.
-    const q = `[out:json][timeout:25];
+    const q = `[out:json][timeout:15][maxsize:2097152];
     (
-      node["tourism"="camp_site"](${bb});
-      way["tourism"="camp_site"](${bb});
-      relation["tourism"="camp_site"](${bb});
-      node["tourism"="caravan_site"](${bb});
-      way["tourism"="caravan_site"](${bb});
-      node["amenity"="drinking_water"](${bb});
-      node["amenity"="water_point"](${bb});
-      node["amenity"="toilets"](${bb});
-      node["amenity"="shower"](${bb});
+      node["tourism"~"^(camp_site|caravan_site)$"](${bb});
+      way["tourism"~"^(camp_site|caravan_site)$"](${bb});
+      node["amenity"~"^(drinking_water|water_point|toilets|shower)$"](${bb});
     );
-    out center body;`;
+    out center qt;`;
 
     const d = await overpassFetch(q);
     const elements = d.elements || [];
