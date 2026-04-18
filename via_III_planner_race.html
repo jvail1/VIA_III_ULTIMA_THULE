@@ -731,6 +731,8 @@ function tr(key, vars) {
 function setLang(lang) {
   currentLang = lang;
   localStorage.setItem('via_lang', lang);
+  readmeLoaded = false;
+  readmeHtmlCache = '';
   applyLang();
 }
 
@@ -2920,13 +2922,18 @@ async function openReadme() {
   const content = document.getElementById('readmeContent');
   if (readmeLoaded && readmeHtmlCache) { content.innerHTML = readmeHtmlCache; return; }
   content.innerHTML = '<div class="loading">Loading…</div>';
-  try {
-    const res = await fetch('./README.md?ts=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    readmeHtmlCache = mdToHtml(await res.text());
-  } catch (e) {
-    readmeHtmlCache = mdToHtml(BUNDLED_README);
+  const lang = currentLang || 'en';
+  const urls = lang !== 'en'
+    ? [`./README.${lang}.md`, './README.md']
+    : ['./README.md'];
+  let md = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url + '?ts=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) { md = await res.text(); break; }
+    } catch (e) {}
   }
+  readmeHtmlCache = mdToHtml(md || BUNDLED_README);
   content.innerHTML = readmeHtmlCache;
   readmeLoaded = true;
 }
