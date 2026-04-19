@@ -33,17 +33,30 @@ Basiert auf [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leaflet
 - **GPX-Upload als Fallback** — wenn die API private Routendaten blockiert, exportieren Sie von RWGPS und laden Sie lokal hoch (es werden keine Daten gesendet)
 - Manuelle Routenprüfung per ID, falls die Routenliste nicht geladen werden kann
 
-### ✚ Erstellen — Straßenbasierte Routenplanung
-- Wählen Sie beliebige Kombinationen der 9 Renn-Etappen
+### ✚ Erstellen — Schnelle straßenbasierte Routenplanung
+Nutzen Sie den Erstellen-Tab als **schnelles Entwurfs-Routing-Tool** — wählen Sie Etappen, schalten Sie Fähren ein, setzen Sie Pins, zeigen Sie eine Vorschau auf echten Straßen an und exportieren Sie. Das Ergebnis ist ein solider Entwurf, den Sie in RideWithGPS, Komoot, Strava oder einem anderen Tool verfeinern können.
+
+- Wählen Sie beliebige Kombinationen der 9 Etappen und schalten Sie einzelne Fähren ein/aus
 - **Vorschau im Straßennetz** — routet jeden Landabschnitt über die öffentliche OSRM-Fahrrad-API mit echten Straßen farblich nach Etappe kodiert
 - Fährüberquerungen als gestrichelte Linien dargestellt (OSRM überspringt Wasser korrekt)
 - Fortschrittsanzeige mit Status pro Segment während der Routenberechnung
-- Direktes Übertragen der fertigen Route in Ihr RideWithGPS-Konto (bis zu 2.000 Spurpunkte)
-- Download als **straßengeroutete GPX-Datei** (vollständiger `<trk>`-Track + `<wpt>`-Wegpunkte) oder als Nur-Wegpunkte-GPX
+- **Direkt zu RideWithGPS senden** — öffnet sofort im Routen-Editor zur weiteren Bearbeitung
+- **GPX herunterladen** — importieren Sie in Komoot, Strava, Garmin Connect, Wahoo oder jedes GPX-kompatible Tool
+- Nur-Wegpunkte-GPX ebenfalls verfügbar zum Laden von Tor-Markierungen auf ein Fahrradcomputer
 
-### ✚ POI: Trinkwasser, Campingplätze und Toiletten anzeigen
-- Zoomen Sie auf der Karte heran und aktivieren Sie das POI-Menü.
-- Wasserquellen, Campingplätze und Toiletten werden angezeigt und passen sich je nach Zoomstufe an. POI-Popups enthalten Google-Maps-Links zur weiteren Prüfung.
+### 📌 Pins — Ad-hoc-Wegpunkte
+Setzen Sie eigene Pins an beliebigen Stellen auf der Karte, um persönliche Wegpunkte hinzuzufügen — ein Hotel, ein Umwegpunkt, eine Versorgungsstation oder eine alternative Kreuzung.
+
+- Tippen Sie auf **📌 Pin hinzufügen** auf der Karte, um einen Wegpunkt zu platzieren
+- Benennen Sie jeden Pin — er erscheint im Erstellen-Tab neben Toren und Fähren
+- Pins werden in straßengerouteten Vorschauen und GPX-Exporten einbezogen
+- Im Browser gespeichert — Pins bleiben zwischen Sitzungen erhalten
+- Nutzen Sie Pins, um Umwege oder Alternativen zu skizzieren, bevor Sie zu einem vollständigen Routing-Tool wechseln
+
+### ⛺ POI — Trinkwasser, Campingplätze und Toiletten
+- Zoomen Sie auf der Karte heran und aktivieren Sie das POI-Menü
+- Wasserquellen, Campingplätze und Toiletten werden angezeigt und passen sich je nach Zoomstufe an
+- POI-Popups enthalten Google-Maps-Links zur weiteren Prüfung
 
 ---
 

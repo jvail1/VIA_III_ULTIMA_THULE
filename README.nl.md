@@ -33,17 +33,30 @@ Gebouwd op [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletj
 - **GPX-upload als terugvaloptie** — als de API privéroutedata blokkeert, exporteer dan vanuit RWGPS en upload lokaal (er wordt niets verzonden)
 - Handmatige route-inspectie op ID als de routelijst niet laadt
 
-### ✚ Aanmaken — Routeplanning via Wegen
-- Selecteer een combinatie van de 9 race-etappes
+### ✚ Aanmaken — Ad-hoc Weggerouteerde Planning
+Gebruik het tabblad Aanmaken als **snelle conceptroutetool** — selecteer etappes, kies veerponten, zet spelden, bekijk een voorvertoning op echte wegen en exporteer. Het resultaat is een goed concept dat je kunt verfijnen in RideWithGPS, Komoot, Strava of een ander routeringsprogramma.
+
+- Selecteer een combinatie van de 9 race-etappes en schakel individuele veerponten in/uit
 - **Voorvertoning op Wegnetwerk** — routeert elk landsegment via de OSRM openbare fiets-API, met werkelijke fietswegen gekleurd per etappe
 - Veerpont-oversteken weergegeven als gestreepte lijnen (OSRM slaat water over)
 - Voortgangsoverlay met status per segment tijdens het routeren
-- Stuur de voltooide route rechtstreeks naar je RideWithGPS-account (tot 2.000 trackpunten)
-- Download als **weggeroute GPX** (volledig `<trk>` track + `<wpt>` waypoints) of waypoints-alleen GPX
+- **Direct naar RideWithGPS sturen** — opent meteen in de route-editor voor verdere verfijning
+- **GPX downloaden** — importeer in Komoot, Strava, Garmin Connect, Wahoo of elk GPX-compatibel programma
+- Waypoints-alleen GPX ook beschikbaar voor het laden van poortmarkeringen in een fietscomputer
 
-### ✚ POI's Tonen Drinkwater, Campings en Toiletten
-- Zoom in op de kaart en schakel het POI-menu in.
-- Waterbronnen, campings en toiletten worden weergegeven en aangepast op basis van zoomniveau. POI-popups bevatten Google Maps-links voor verdere inspectie.
+### 📌 Spelden — Ad-hoc Waypoints
+Zet eigen spelden op de kaart om persoonlijke waypoints toe te voegen — een hotel, een omleidingspunt, een bevoorradingshalte of een alternatief wegkruispunt.
+
+- Tik op **📌 Speld toevoegen** op de kaart om een waypoint te plaatsen
+- Geef elke speld een naam — ze verschijnen in het tabblad Aanmaken naast de poorten en veerponten
+- Spelden worden meegenomen in weggerouteerde voorvertoningen en GPX-exports
+- Opgeslagen in je browser — spelden blijven bewaard tussen sessies
+- Gebruik spelden om omwegen of alternatieven te schetsen voordat je overgaat naar een volledig routeringsprogramma
+
+### ⛺ POI's — Drinkwater, Campings en Toiletten
+- Zoom in op de kaart en schakel het POI-menu in
+- Waterbronnen, campings en toiletten worden weergegeven en aangepast op basis van zoomniveau
+- POI-popups bevatten Google Maps-links voor verdere inspectie
 
 ---
 

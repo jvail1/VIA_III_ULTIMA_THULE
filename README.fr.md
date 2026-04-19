@@ -33,17 +33,30 @@ Développé avec [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://le
 - **Chargement GPX de secours** — si l'API bloque les données d'itinéraire privées, exportez depuis RWGPS et chargez localement (aucune donnée n'est envoyée nulle part)
 - Inspection manuelle d'un itinéraire par identifiant si le chargement de la liste échoue
 
-### ✚ Créer — Planification sur réseau routier
-- Sélectionnez toute combinaison des 9 étapes de course
+### ✚ Créer — Planification rapide sur réseau routier
+Utilisez l'onglet Créer comme **outil de brouillon rapide** — sélectionnez des étapes, choisissez des ferries, posez des épingles, prévisualisez sur de vraies routes et exportez. Le résultat est un brouillon solide à affiner dans RideWithGPS, Komoot, Strava ou tout autre outil de planification.
+
+- Sélectionnez toute combinaison des 9 étapes et activez/désactivez les ferries individuellement
 - **Aperçu sur le réseau routier** — trace chaque segment terrestre via l'API cycliste OSRM publique, avec les routes réelles colorées par étape
 - Les traversées en ferry s'affichent en pointillés (OSRM ignore correctement l'eau)
 - Superposition de progression avec statut par segment lors du calcul
-- Envoi direct de l'itinéraire terminé vers votre compte RideWithGPS (jusqu'à 2 000 points de tracé)
-- Téléchargement en **GPX routé sur route** (tracé `<trk>` complet + waypoints `<wpt>`) ou en GPX waypoints uniquement
+- **Envoi direct vers RideWithGPS** — s'ouvre immédiatement dans l'éditeur de route pour affinage
+- **Téléchargement en GPX** — importez dans Komoot, Strava, Garmin Connect, Wahoo ou tout outil compatible GPX
+- GPX waypoints uniquement disponible pour charger les marqueurs de portes dans un compteur vélo
 
-### ✚ Affichage des POI : eau potable, campings et toilettes
-- Zoomez sur la carte et activez le menu POI.
-- Les sources d'eau, campings et toilettes s'affichent et s'ajustent selon le niveau de zoom. Les fenêtres contextuelles incluent des liens Google Maps pour une inspection approfondie.
+### 📌 Épingles — Waypoints personnalisés
+Posez des épingles n'importe où sur la carte pour ajouter des waypoints personnels — un hôtel, un point de détour, un ravitaillement ou un carrefour alternatif.
+
+- Appuyez sur **📌 Ajouter une épingle** sur la carte pour placer un waypoint
+- Nommez chaque épingle — elles apparaissent dans l'onglet Créer aux côtés des portes et ferries
+- Les épingles sont incluses dans les aperçus routiers et les exports GPX
+- Sauvegardées dans votre navigateur — persistent entre les sessions
+- Utilisez les épingles pour esquisser des détours ou alternatives avant de passer à un outil de routage complet
+
+### ⛺ POI — Eau potable, campings et toilettes
+- Zoomez sur la carte et activez le menu POI
+- Les sources d'eau, campings et toilettes s'affichent et s'ajustent selon le niveau de zoom
+- Les fenêtres contextuelles incluent des liens Google Maps pour une inspection approfondie
 
 ---
 

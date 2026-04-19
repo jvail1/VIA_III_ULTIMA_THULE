@@ -33,17 +33,30 @@ Desarrollado con [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://le
 - **Carga GPX de respaldo** — si la API bloquea datos de rutas privadas, exporte desde RWGPS y cargue localmente (no se envía nada a ningún servidor)
 - Inspección manual de ruta por ID si la lista de rutas no se carga
 
-### ✚ Crear — Planificación con rutas en red vial
-- Seleccione cualquier combinación de las 9 etapas de la carrera
+### ✚ Crear — Planificación rápida con ruta en red vial
+Use la pestaña Crear como **herramienta de borrador rápido** — seleccione etapas, elija ferris, coloque marcadores, previsualice en carreteras reales y exporte. El resultado es un borrador sólido que puede refinar en RideWithGPS, Komoot, Strava o cualquier otra herramienta.
+
+- Seleccione cualquier combinación de las 9 etapas y active/desactive ferris individualmente
 - **Vista previa en la red vial** — traza cada segmento terrestre a través de la API pública de ciclismo OSRM, mostrando las carreteras reales codificadas por color según la etapa
 - Los cruces en ferri se muestran como líneas discontinuas (OSRM omite el agua correctamente)
 - Superposición de progreso con estado por segmento durante el cálculo de la ruta
-- Envío directo de la ruta completada a su cuenta de RideWithGPS (hasta 2.000 puntos de trazado)
-- Descarga como **GPX con ruta vial** (trazado `<trk>` completo + waypoints `<wpt>`) o solo waypoints en GPX
+- **Envío directo a RideWithGPS** — se abre inmediatamente en el editor de rutas para su refinamiento
+- **Descarga en GPX** — importe en Komoot, Strava, Garmin Connect, Wahoo o cualquier herramienta compatible con GPX
+- GPX solo con waypoints también disponible para cargar marcadores de portones en un ciclocomputador
 
-### ✚ Visualización de PDI: agua potable, campings y aseos
-- Acerque el zoom en el mapa y active el menú de PDI.
-- Las fuentes de agua, campings y aseos se mostrarán y ajustarán según el nivel de zoom. Las ventanas emergentes de PDI incluyen enlaces a Google Maps para una inspección más detallada.
+### 📌 Marcadores — Waypoints ad hoc
+Coloque marcadores personalizados en cualquier punto del mapa para añadir waypoints personales — un hotel, un punto de desvío, un avituallamiento o un cruce alternativo.
+
+- Pulse **📌 Añadir marcador** en el mapa para colocar un waypoint
+- Asigne un nombre a cada marcador — aparecerán en la pestaña Crear junto a los portones y ferris
+- Los marcadores se incluyen en las vistas previas de rutas y en las exportaciones GPX
+- Guardados en su navegador — persisten entre sesiones
+- Use los marcadores para trazar desvíos o alternativas antes de pasar a una herramienta de planificación completa
+
+### ⛺ PDI — Agua potable, campings y aseos
+- Acerque el zoom en el mapa y active el menú de PDI
+- Las fuentes de agua, campings y aseos se mostrarán y ajustarán según el nivel de zoom
+- Las ventanas emergentes de PDI incluyen enlaces a Google Maps para una inspección más detallada
 
 ---
 

@@ -33,17 +33,30 @@ Sviluppato con [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leaf
 - **Caricamento GPX come alternativa** — se l'API blocca i dati di percorso privati, esportare da RWGPS e caricare localmente (nessun dato viene inviato da nessuna parte)
 - Ispezione manuale del percorso tramite ID se il caricamento dell'elenco percorsi fallisce
 
-### ✚ Crea — Pianificazione su rete stradale
-- Seleziona qualsiasi combinazione delle 9 tappe della gara
+### ✚ Crea — Pianificazione rapida su rete stradale
+Usa la scheda Crea come **strumento di bozza rapida** — seleziona tappe, scegli traghetti, posiziona segnaposto, visualizza l'anteprima su strade reali ed esporta. Il risultato è una bozza solida da rifinire in RideWithGPS, Komoot, Strava o qualsiasi altro strumento.
+
+- Seleziona qualsiasi combinazione delle 9 tappe e attiva/disattiva i traghetti singolarmente
 - **Anteprima sulla rete stradale** — calcola ogni segmento terrestre tramite l'API ciclistica pubblica OSRM, mostrando le strade reali codificate per colore in base alla tappa
 - I traversamenti in traghetto sono mostrati come linee tratteggiate (OSRM salta correttamente l'acqua)
 - Sovrapposizione di avanzamento con stato per segmento durante il calcolo del percorso
-- Invio diretto del percorso completato al tuo account RideWithGPS (fino a 2.000 punti traccia)
-- Download come **GPX con percorso stradale** (traccia `<trk>` completa + waypoint `<wpt>`) o GPX con soli waypoint
+- **Invio diretto a RideWithGPS** — si apre immediatamente nell'editor di percorsi per ulteriori modifiche
+- **Download in GPX** — importa in Komoot, Strava, Garmin Connect, Wahoo o qualsiasi strumento compatibile con GPX
+- GPX con soli waypoint disponibile per caricare i marcatori dei cancelli su un ciclocomputer
 
-### ✚ Visualizzazione PDI: acqua potabile, campeggi e servizi igienici
-- Ingrandisci la mappa e attiva il menu PDI.
-- Fonti d'acqua, campeggi e servizi igienici compariranno e si aggiorneranno in base al livello di zoom. I popup dei PDI includono link a Google Maps per un'ispezione più approfondita.
+### 📌 Segnaposto — Waypoint ad hoc
+Posiziona segnaposto personalizzati in qualsiasi punto della mappa per aggiungere waypoint personali — un hotel, un punto di deviazione, un rifornimento o un incrocio alternativo.
+
+- Tocca **📌 Aggiungi segnaposto** sulla mappa per posizionare un waypoint
+- Assegna un nome a ogni segnaposto — appariranno nella scheda Crea accanto ai cancelli e ai traghetti
+- I segnaposto sono inclusi nelle anteprime stradali e nelle esportazioni GPX
+- Salvati nel browser — persistono tra le sessioni
+- Usa i segnaposto per abbozzare deviazioni o alternative prima di passare a uno strumento di pianificazione completo
+
+### ⛺ PDI — Acqua potabile, campeggi e servizi igienici
+- Ingrandisci la mappa e attiva il menu PDI
+- Fonti d'acqua, campeggi e servizi igienici compariranno e si aggiorneranno in base al livello di zoom
+- I popup dei PDI includono link a Google Maps per un'ispezione più approfondita
 
 ---
 

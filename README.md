@@ -33,17 +33,30 @@ Built on [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletjs.
 - **GPX upload fallback** — if the API blocks private route data, export from RWGPS and upload locally (nothing is sent anywhere)
 - Manual route inspection by ID if route list fails to load
 
-### ✚ Create — Road-Routed Planning
-- Select any combination of the 9 race legs
+### ✚ Create — Ad-Hoc Road-Routed Planning
+Use the Create tab as a **quick draft routing tool** — select legs, pick ferries, drop pins, preview on real roads, and export. The result is a solid rough draft you can refine in RideWithGPS, Komoot, Strava, or any other routing tool.
+
+- Select any combination of the 9 race legs and toggle individual ferries on/off
 - **Preview on Road Network** — routes each land segment via the OSRM public cycling API, showing actual cycling roads colour-coded by leg
 - Ferry crossings shown as dashed lines (OSRM correctly skips water)
 - Progress overlay with per-segment status during routing
-- Push the completed route directly to your RideWithGPS account (up to 2,000 track points)
-- Download as **road-routed GPX** (full `<trk>` track + `<wpt>` waypoints) or waypoints-only GPX
+- **Push directly to RideWithGPS** — opens immediately in the route editor for further refinement
+- **Download as GPX** — import into Komoot, Strava, Garmin Connect, Wahoo, or any GPX-compatible tool
+- Waypoints-only GPX also available for loading gate markers into a head unit
 
-### ✚ POI's Display Drinking Water, Campgrounds and Restrooms
-- Zoom in on map and toggle on POI's menu.
-- Water sources, campgrounds and restrooms will populate and adjust based on zoom level. POI popups include Google maps links for further inspection.
+### 📌 Pins — Ad-Hoc Waypoints
+Drop custom pins anywhere on the map to add personal waypoints to your route planning — a hotel, a detour point, a resupply stop, or an alternative road junction.
+
+- Tap **📌 Add Pin** on the map to place a waypoint at any location
+- Name each pin and it appears in the Create tab alongside the race gates and ferries
+- Pins are included in road-routed previews and GPX exports as waypoints
+- Saved to your browser — pins persist between sessions
+- Use pins to sketch detours or alternatives before committing to a full routing app
+
+### ⛺ POIs — Drinking Water, Campgrounds and Restrooms
+- Zoom in on the map and toggle the POI menu
+- Water sources, campgrounds and restrooms populate and adjust based on zoom level
+- POI popups include Google Maps links for further inspection
 
 ---
 
