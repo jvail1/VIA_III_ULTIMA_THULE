@@ -414,7 +414,11 @@
   .routing-step { font-family:'DM Mono',monospace;font-size:10px;color:#666;max-width:300px;text-align:center; }
   .marker-wp { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;color:white;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.6);cursor:pointer; }
   .marker-wp.start{background:#0f0f0f;font-size:8px}.marker-wp.finish{background:#c8410a;font-size:8px}
-  .marker-wp.gate{background:#1a5c8a}.marker-wp.refuge{background:#2a7a3b;font-size:13px}.marker-wp.ferry{background:#6b4a1a;font-size:13px}
+  .marker-wp.gate{background:#1a5c8a}.marker-wp.refuge{background:#2a7a3b;font-size:13px}
+  .marker-wp.ferry{background:#1e7a2e;font-size:12px;position:relative}
+  .marker-wp.ferry::after{content:'✓';position:absolute;top:-5px;right:-5px;width:12px;height:12px;background:white;color:#1e7a2e;border-radius:50%;font-size:9px;font-weight:900;line-height:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+  .marker-banned-ferry{width:22px;height:22px;background:#c8410a;border:2.5px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.45);position:relative;overflow:hidden}
+  .marker-banned-ferry::after{content:'';position:absolute;top:50%;left:-2px;right:-2px;height:2.5px;background:white;transform:translateY(-50%) rotate(-45deg);border-radius:1px}
 
   .leaflet-violation-icon { background:var(--accent); border:2px solid white; border-radius:50%; width:14px!important; height:14px!important; box-shadow:0 1px 4px rgba(0,0,0,0.4); }
   .leaflet-gate-hit-icon { background:var(--green); border:2px solid white; border-radius:50%; width:12px!important; height:12px!important; margin:-6px 0 0 -6px!important; }
@@ -1729,11 +1733,13 @@ const RECOMMENDED_ROUTE = [ // kept for reference, no longer rendered
 function placeWaypointMarkers() {
   if (!wpMarkerGroup) return;
   wpMarkerGroup.clearLayers();
-  const col = {start:'#0f0f0f',finish:'#c8410a',gate:'#1a5c8a',refuge:'#2a7a3b',ferry:'#6b4a1a',waypoint:'#555'};
+  const col = {start:'#0f0f0f',finish:'#c8410a',gate:'#1a5c8a',refuge:'#2a7a3b',waypoint:'#555'};
   WPS.forEach((wp, i) => {
+    // Ferry markers use CSS class for green+checkmark styling; others use inline colour
+    const bg = wp.type === 'ferry' ? '' : `style="background:${col[wp.type]||'#555'}"`;
     const icon = L.divIcon({
       className: '',
-      html: `<div class="marker-wp ${wp.type}" style="background:${col[wp.type]||'#555'}">${wp.seq}</div>`,
+      html: `<div class="marker-wp ${wp.type}" ${bg}>${wp.seq}</div>`,
       iconSize: [28,28], iconAnchor: [14,14],
     });
     L.marker([wp.lat, wp.lng], {icon, zIndexOffset:200})
@@ -2161,7 +2167,9 @@ function renderRouteOnMap(routeName, pts, result) {
 
   // Violation markers (red)
   for (const v of result.violations) {
-    const icon = L.divIcon({ className: 'leaflet-violation-icon', iconSize: [14,14], iconAnchor: [7,7], html: '' });
+    const icon = v.type === 'ferry'
+      ? L.divIcon({ className: '', html: '<div class="marker-banned-ferry"></div>', iconSize: [22,22], iconAnchor: [11,11] })
+      : L.divIcon({ className: 'leaflet-violation-icon', iconSize: [14,14], iconAnchor: [7,7], html: '' });
     L.marker([v.lat, v.lng], { icon })
       .bindPopup(`<div class="violation-popup"><h4>⛔ ${v.name}</h4><p>${v.note}</p><br><a href="https://ridewithgps.com/routes/new?start_lat=${v.closestPt.lat}&start_lng=${v.closestPt.lng}" target="_blank">Reroute from here ↗</a></div>`)
       .addTo(routeLayerGroup);
@@ -2282,7 +2290,7 @@ function selectWp(i) {
   // Clear only the pulse marker, never the route polylines
   if (wpPulseGroup) wpPulseGroup.clearLayers();
   leafletMap.setView([wp.lat, wp.lng], Math.max(leafletMap.getZoom(), 11), {animate: true});
-  const col = {gate:'#1a5c8a',ferry:'#6b4a1a',refuge:'#2a7a3b',start:'#0f0f0f',finish:'#c8410a'};
+  const col = {gate:'#1a5c8a',ferry:'#1e7a2e',refuge:'#2a7a3b',start:'#0f0f0f',finish:'#c8410a'};
   L.circleMarker([wp.lat, wp.lng], {
     radius: 10, color: 'white', weight: 2,
     fillColor: col[wp.type] || '#888', fillOpacity: 1
