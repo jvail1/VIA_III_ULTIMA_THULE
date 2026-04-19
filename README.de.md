@@ -109,17 +109,7 @@ S · I · II · III · IV · V · VI · VII · VIII · IX · X · XI · XII · X
 
 ## Erlaubte Fähren
 
-| Fähre | Hinweise |
-|---|---|
-| Puttgarden–Rødby | DE→DK, ~45 Min., Fußgänger willkommen |
-| Helsingør–Helsingborg | **Einzige** erlaubte DK→SE-Überquerung, 20 Min., alle 20 Min. |
-| Lysebotn–Forsand | Voraus buchen — Juli/August ausgebucht. billetter.kolumbus.no |
-| Solvorn–Ornes | Für Urnes Stabkirche (Tor X), ~15 Min. zu Fuß |
-| Molde–Vestnes | Überquert den Romsdalsfjord |
-| Linge–Eidsdal | Nach Trollstigen |
-| Lote–Anda | Überquert den Nordfjord, vermeidet alle gesperrten E39-Tunnel bei Volda |
-| Festøya | ~20 Min., häufig |
-| Lauvstad–Volda | Letzte Fähre ins Ziel |
+Die vollständige Liste der erlaubten und gesperrten Fähren — einschließlich dänischer Inselüberfahrten, Elbüberquerungen, Hardangerfjord, Sognefjord und der Fährkette nach Volda — ist im **⛴ Fähren**-Panel des Erstellen-Tabs verfügbar. Grüne Zeilen sind erlaubt; rote Zeilen sind gesperrt.
 
 ---
 

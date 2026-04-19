@@ -109,17 +109,7 @@ S · I · II · III · IV · V · VI · VII · VIII · IX · X · XI · XII · X
 
 ## Toegestane Veerponten
 
-| Veerpont | Opmerkingen |
-|---|---|
-| Puttgarden–Rødby | DE→DK, ~45 min, instappen mogelijk |
-| Helsingør–Helsingborg | **Enige** toegestane DK→SE oversteek, 20 min, elke 20 min |
-| Lysebotn–Forsand | Vooraf boeken — volgeboekt in jul/aug. billetter.kolumbus.no |
-| Solvorn–Ornes | Voor Urnes Staafkerk (Poort X), ~15 min instappen |
-| Molde–Vestnes | Oversteekt Romsdalsfjord |
-| Linge–Eidsdal | Na Trollstigen |
-| Lote–Anda | Oversteekt Nordfjord, vermijdt alle verboden E39-tunnels bij Volda |
-| Festøya | ~20 min, frequent |
-| Lauvstad–Volda | Laatste veerpont naar de finish |
+De volledige lijst van toegestane en verboden veerponten — inclusief Deense eilandoversteken, Elbe-oversteken, Hardangerfjord, Sognefjord en de veerpont-keten naar Volda — is beschikbaar in het **⛴ Veerboten**-paneel op het tabblad Aanmaken. Groene rijen zijn toegestaan; rode rijen zijn verboden.
 
 ---
 

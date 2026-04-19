@@ -109,17 +109,7 @@ S · I · II · III · IV · V · VI · VII · VIII · IX · X · XI · XII · X
 
 ## Ferris permitidos
 
-| Ferri | Notas |
-|---|---|
-| Puttgarden–Rødby | DE→DK, ~45 min, embarque a pie |
-| Helsingør–Helsingborg | **Único** cruce DK→SE permitido, 20 min, cada 20 min |
-| Lysebotn–Forsand | Reserve con antelación — completo en jul./ago. billetter.kolumbus.no |
-| Solvorn–Ornes | Para la Iglesia de madera de Urnes (Puerta X), ~15 min a pie |
-| Molde–Vestnes | Cruza el Romsdalsfjord |
-| Linge–Eidsdal | Después de Trollstigen |
-| Lote–Anda | Cruza el Nordfjord, evita todos los túneles E39 prohibidos cerca de Volda |
-| Festøya | ~20 min, frecuente |
-| Lauvstad–Volda | Último ferri hasta la llegada |
+La lista completa de ferris permitidos y prohibidos — incluidos los cruces entre islas danesas, los cruces del Elba, el Hardangerfjord, el Sognefjord y la cadena de ferris hasta Volda — está disponible en el panel **⛴ Ferris** de la pestaña Crear. Las filas verdes están permitidas; las rojas están prohibidas.
 
 ---
 

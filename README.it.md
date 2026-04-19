@@ -109,17 +109,7 @@ S · I · II · III · IV · V · VI · VII · VIII · IX · X · XI · XII · X
 
 ## Traghetti consentiti
 
-| Traghetto | Note |
-|---|---|
-| Puttgarden–Rødby | DE→DK, ~45 min, imbarco a piedi |
-| Helsingør–Helsingborg | **Unico** attraversamento DK→SE consentito, 20 min, ogni 20 min |
-| Lysebotn–Forsand | Prenotare in anticipo — esaurito in lug./ago. billetter.kolumbus.no |
-| Solvorn–Ornes | Per la chiesa in legno di Urnes (Cancello X), ~15 min a piedi |
-| Molde–Vestnes | Attraversa il Romsdalsfjord |
-| Linge–Eidsdal | Dopo Trollstigen |
-| Lote–Anda | Attraversa il Nordfjord, evita tutte le gallerie E39 vietate vicino a Volda |
-| Festøya | ~20 min, frequente |
-| Lauvstad–Volda | Ultimo traghetto fino all'arrivo |
+L'elenco completo dei traghetti consentiti e vietati — inclusi i collegamenti tra le isole danesi, gli attraversamenti dell'Elba, l'Hardangerfjord, il Sognefjord e la catena di traghetti verso Volda — è disponibile nel pannello **⛴ Traghetti** della scheda Crea. Le righe verdi sono consentite; quelle rosse sono vietate.
 
 ---
 

@@ -109,17 +109,7 @@ S · I · II · III · IV · V · VI · VII · VIII · IX · X · XI · XII · X
 
 ## Permitted Ferries
 
-| Ferry | Notes |
-|---|---|
-| Puttgarden–Rødby | DE→DK, ~45 min, walk-on |
-| Helsingør–Helsingborg | **Only** permitted DK→SE crossing, 20 min, every 20 min |
-| Lysebotn–Forsand | Book in advance — sells out Jul/Aug. billetter.kolumbus.no |
-| Solvorn–Ornes | For Urnes Stave Church (Gate X), ~15 min walk-on |
-| Molde–Vestnes | Crosses Romsdalsfjord |
-| Linge–Eidsdal | After Trollstigen |
-| Lote–Anda | Crosses Nordfjord, avoids all banned E39 tunnels near Volda |
-| Festøya | ~20 min, frequent |
-| Lauvstad–Volda | Final ferry into the finish |
+The full list of permitted and banned ferries — including Danish island crossings, Elbe crossings, Hardangerfjord, Sognefjord, and the Volda finish chain — is available in the **⛴ Ferries** panel of the Create tab in the tool. Green rows are permitted; red rows are banned.
 
 ---
 
