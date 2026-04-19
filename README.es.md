@@ -10,8 +10,15 @@ Desarrollado con [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://le
 
 ### 🗺 Mapa en vivo
 - Mapa interactivo Leaflet con los 26 puntos de paso (puertas, ferris, refugio, salida/llegada) mostrados como marcadores etiquetados
-- Superposición de **ruta recomendada** en naranja discontinuo para las 9 etapas, activable/desactivable desde la leyenda del mapa
+- El botón **🗺 Mapa oficial** superpone el Google My Maps oficial de VIA como referencia
 - El mapa se divide en vista superior/inferior cuando se abre un informe de conformidad
+
+### ⛅ Clima en los portones
+- **Previsión de 3 días** para cada portón, obtenida automáticamente al seleccionar un portón
+- Muestra temperatura máx/mín diaria, velocidad y dirección del viento, precipitación y un resumen meteorológico
+- Impulsado por [Open-Meteo](https://open-meteo.com) (gratuito, sin clave API)
+- Active/desactive la previsión por portón con el botón **⛅ Clima**
+- Caché en memoria de 30 minutos — las previsiones se mantienen actualizadas sin sobrecargar la API
 
 ### 🚴 Mis rutas — Inspector de conformidad
 - Carga todas sus rutas de RideWithGPS (paginado, gestiona bibliotecas grandes)

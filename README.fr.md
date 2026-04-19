@@ -10,8 +10,15 @@ Développé avec [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://le
 
 ### 🗺 Carte interactive
 - Carte Leaflet interactive avec les 26 points de passage (portes, ferries, refuge, départ/arrivée) affichés comme des marqueurs étiquetés
-- Superposition de l'**itinéraire recommandé** en orange pointillé pour les 9 étapes, activable/désactivable depuis la légende
+- Le bouton **🗺 Carte officielle** superpose la Google My Maps officielle VIA pour référence
 - La carte se divise en vue haute/basse lors de l'ouverture d'un rapport de conformité
+
+### ⛅ Météo aux portes
+- **Prévisions sur 3 jours** pour chaque porte, récupérées automatiquement lors de la sélection d'une porte
+- Affiche les températures max/min journalières, la vitesse et la direction du vent, les précipitations et un résumé météo
+- Propulsé par [Open-Meteo](https://open-meteo.com) (gratuit, sans clé API)
+- Activez/désactivez les prévisions par porte avec le bouton **⛅ Météo**
+- Cache en mémoire de 30 minutes — les prévisions restent à jour sans surcharger l'API
 
 ### 🚴 Mes itinéraires — Inspecteur de conformité
 - Charge tous vos itinéraires RideWithGPS (paginé, gère les grandes bibliothèques)

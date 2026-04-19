@@ -10,8 +10,15 @@ Basiert auf [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leaflet
 
 ### 🗺 Live-Karte
 - Interaktive Leaflet-Karte mit allen 26 Wegpunkten (Tore, Fähren, Refuge, Start/Ziel) als beschriftete Marker
-- Gestrichelte orangefarbene **empfohlene Routenüberlagerung** für alle 9 Etappen, über die Kartenlegende ein-/ausblendbar
+- Schaltfläche **🗺 Offizielle Karte** blendet die offizielle VIA Google My Maps als Referenz ein
 - Karte teilt sich in eine Oben/Unten-Ansicht, wenn ein Konformitätsbericht geöffnet ist
+
+### ⛅ Tor-Wetter
+- **3-Tage-Vorhersage** für jedes Tor, automatisch abgerufen wenn ein Tor ausgewählt wird
+- Zeigt tägliche Höchst-/Tiefsttemperatur, Windgeschwindigkeit und -richtung, Niederschlag und eine Wetterzusammenfassung
+- Betrieben von [Open-Meteo](https://open-meteo.com) (kostenlos, kein API-Schlüssel erforderlich)
+- Vorhersage pro Tor mit der Schaltfläche **⛅ Wetter** ein-/ausschalten
+- 30-Minuten-Speicher-Cache — Vorhersagen bleiben aktuell ohne API-Überlastung
 
 ### 🚴 Meine Routen — Konformitätsprüfer
 - Lädt alle Ihre RideWithGPS-Routen (paginiert, verarbeitet große Bibliotheken)

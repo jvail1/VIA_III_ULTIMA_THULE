@@ -10,8 +10,15 @@ Built on [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletjs.
 
 ### 🗺 Live Map
 - Interactive Leaflet map with all 26 waypoints (gates, ferries, refuge, start/finish) shown as labelled markers
-- Dashed orange **recommended route overlay** for all 9 legs, toggleable from the map legend
+- **🗺 Official Map** button overlays the official VIA Google My Maps for reference
 - Map splits into a top/bottom view when a compliance report is open
+
+### ⛅ Gate Weather
+- **3-day forecast** for every gate, fetched automatically when you select a gate
+- Shows daily high/low temperature, wind speed and direction, precipitation, and a weather condition summary
+- Powered by [Open-Meteo](https://open-meteo.com) (free, no API key needed)
+- Toggle the forecast on/off per gate with the **⛅ Weather** button
+- 30-minute in-memory cache — forecasts stay fresh without hammering the API
 
 ### 🚴 My Routes — Compliance Inspector
 - Loads all your RideWithGPS routes (paginated, handles large libraries)

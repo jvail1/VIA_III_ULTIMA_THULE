@@ -10,8 +10,15 @@ Sviluppato con [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leaf
 
 ### 🗺 Mappa live
 - Mappa Leaflet interattiva con tutti i 26 waypoint (cancelli, traghetti, rifugio, partenza/arrivo) visualizzati come marcatori etichettati
-- Sovrapposizione del **percorso consigliato** in arancione tratteggiato per tutte le 9 tappe, attivabile/disattivabile dalla legenda della mappa
+- Il pulsante **🗺 Mappa ufficiale** sovrappone la Google My Maps ufficiale VIA come riferimento
 - La mappa si divide in vista superiore/inferiore quando si apre un rapporto di conformità
+
+### ⛅ Meteo ai cancelli
+- **Previsioni a 3 giorni** per ogni cancello, recuperate automaticamente alla selezione di un cancello
+- Mostra temperatura max/min giornaliera, velocità e direzione del vento, precipitazioni e un riepilogo meteorologico
+- Alimentato da [Open-Meteo](https://open-meteo.com) (gratuito, senza chiave API)
+- Attiva/disattiva le previsioni per cancello con il pulsante **⛅ Meteo**
+- Cache in memoria di 30 minuti — le previsioni rimangono aggiornate senza sovraccaricare l'API
 
 ### 🚴 I miei percorsi — Ispettore di conformità
 - Carica tutti i tuoi percorsi RideWithGPS (paginato, gestisce librerie di grandi dimensioni)

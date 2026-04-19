@@ -10,8 +10,15 @@ Gebouwd op [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leafletj
 
 ### 🗺 Live Kaart
 - Interactieve Leaflet-kaart met alle 26 waypoints (poorten, veerponten, refuge, start/finish) als gelabelde markeringen
-- Oranje gestreepte **aanbevolen route-overlay** voor alle 9 etappes, in- en uitschakelbaar via de kaartlegende
+- Knop **🗺 Officiële Kaart** toont de officiële VIA Google My Maps als referentie-overlay
 - Kaart splitst in een boven/onder-weergave wanneer een compliancerapport open is
+
+### ⛅ Poortweer
+- **3-daagse weersvoorspelling** voor elke poort, automatisch opgehaald wanneer je een poort selecteert
+- Toont dagelijkse maximale/minimale temperatuur, windsnelheid en -richting, neerslag en een weersomschrijving
+- Aangedreven door [Open-Meteo](https://open-meteo.com) (gratis, geen API-sleutel nodig)
+- Schakel de voorspelling per poort in/uit met de knop **⛅ Weer**
+- 30 minuten in-memory cache — voorspellingen blijven actueel zonder overbelasting van de API
 
 ### 🚴 Mijn Routes — Compliance-inspecteur
 - Laadt al je RideWithGPS-routes (gepagineerd, geschikt voor grote bibliotheken)
