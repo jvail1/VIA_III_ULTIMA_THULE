@@ -1751,7 +1751,11 @@ async function previewRoute() {
       if (res && detourRatio <= 4) {
         sc = res.coords; sd = res.distanceM;
         L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
-        L.polyline(sc, {color, weight:3.5, opacity:0.85}).addTo(routeLayerGroup);
+        const poly = L.polyline(sc, {color, weight:3.5, opacity:0.85});
+        poly.on('click', e => { L.DomEvent.stopPropagation(e); insertRouteViaPin(e.latlng.lat, e.latlng.lng); });
+        poly.on('mouseover', () => { poly.setStyle({weight:5.5, opacity:1}); leafletMap.getContainer().style.cursor = 'crosshair'; });
+        poly.on('mouseout',  () => { poly.setStyle({weight:3.5, opacity:0.85}); leafletMap.getContainer().style.cursor = ''; });
+        poly.addTo(routeLayerGroup);
       } else {
         if (res && detourRatio > 4) {
           console.log(`Segment ${fw.name} → ${tw.name}: detour ratio ${detourRatio.toFixed(1)}x — treating as water crossing`);
@@ -1971,6 +1975,24 @@ function injectRoutingPins(pts) {
     }
   }
   return result;
+}
+
+function insertRouteViaPin(lat, lng) {
+  const pin = {
+    id: 'pin-' + Date.now(),
+    lat, lng,
+    name: 'Via point',
+    note: '',
+    routeDistM: null,
+    useAsWaypoint: true,
+  };
+  userPins.push(pin);
+  savePins();
+  renderPins();
+  L.circleMarker([lat, lng], {
+    radius: 8, color: 'white', weight: 2, fillColor: '#7c3aed', fillOpacity: 1
+  }).bindTooltip('📌 Via point — re-preview to reroute').addTo(routeLayerGroup);
+  showToast('Via-point added — tap Preview to re-route through it', 'info');
 }
 
 function addUserPin(lat, lng, name, note) {
