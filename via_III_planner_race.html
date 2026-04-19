@@ -219,6 +219,11 @@
     border-top: 2px solid var(--border);
     display: none;
   }
+  .compliance-panel.minimized {
+    flex: 0;
+    overflow: hidden;
+  }
+  .compliance-panel.minimized .compliance-body { display: none; }
   .compliance-header {
     padding: 10px 16px;
     border-bottom: 1px solid var(--border);
@@ -231,6 +236,19 @@
     top: 0;
     z-index: 1;
   }
+  .compliance-toggle {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+    line-height: 1.6;
+    flex-shrink: 0;
+  }
+  .compliance-toggle:hover { background: var(--paper); color: var(--ink); }
   .compliance-header h3 {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 13px;
@@ -1325,11 +1343,9 @@ async function selectRoute(id, name) {
   // Show compliance panel loading state
   const cp = document.getElementById('compliancePanel');
   cp.style.display = 'block';
-  cp.innerHTML = `
-    <div class="compliance-header">
-      <h3>${tr('compliance_title')}</h3>
-    </div>
-    <div class="loading-row"><span class="spinner"></span>Fetching full route geometry from RideWithGPS...</div>`;
+  cp.classList.remove('minimized');
+  cp.innerHTML = complianceHeader(tr('compliance_title')) +
+    `<div class="compliance-body"><div class="loading-row"><span class="spinner"></span>Fetching full route geometry from RideWithGPS...</div></div>`;
 
   // Resize map to split view
   document.getElementById('mapAreaWrap').className = 'map-area split';
@@ -1379,8 +1395,8 @@ async function selectRoute(id, name) {
     if (!route) {
       // Show GPX upload fallback — works regardless of API auth
       cp.innerHTML = `
-        <div class="compliance-header"><h3>${tr('compliance_title')}</h3></div>
-        <div class="empty-state">
+        ${complianceHeader(tr('compliance_title'))}
+        <div class="compliance-body"><div class="empty-state">
           <div class="icon">🔒</div>
           <p style="font-weight:600;margin-bottom:6px">API access blocked (HTTP ${lastStatus||403})</p>
           <p style="margin-bottom:14px;font-size:12px;color:var(--muted)">
@@ -1394,7 +1410,7 @@ async function selectRoute(id, name) {
             📂 Upload GPX file
             <input type="file" accept=".gpx" style="display:none" onchange="loadGPXFile(event, '${name.replace(/'/g,"\'")}')">
           </label>
-        </div>`;
+        </div></div>`;
       document.getElementById('detailBar').innerHTML = `<h2>${name}</h2><span class="badge red">${tr('badge_api_blocked')}</span>`;
       document.getElementById('mapAreaWrap').className = 'map-area split';
       return;
@@ -1414,8 +1430,8 @@ async function selectRoute(id, name) {
 
     if (pts.length === 0) {
       cp.innerHTML = `
-        <div class="compliance-header"><h3>${tr('compliance_title')}</h3></div>
-        <div class="empty-state"><div class="icon">📭</div><p>${tr('compliance_no_track')}</p></div>`;
+        ${complianceHeader(tr('compliance_title'))}
+        <div class="compliance-body"><div class="empty-state"><div class="icon">📭</div><p>${tr('compliance_no_track')}</p></div></div>`;
       return;
     }
 
@@ -1457,22 +1473,35 @@ async function selectRoute(id, name) {
 
   } catch(e) {
     cp.innerHTML = `
-      <div class="compliance-header"><h3>Compliance Report</h3></div>
-      <div class="empty-state"><div class="icon">⚠️</div><p>Could not fetch route detail.<br><small>${e.message}</small></p></div>`;
+      ${complianceHeader('Compliance Report')}
+      <div class="compliance-body"><div class="empty-state"><div class="icon">⚠️</div><p>Could not fetch route detail.<br><small>${e.message}</small></p></div></div>`;
     showToast(`Error fetching route: ${e.message}`, 'error');
   }
+}
+
+function complianceHeader(title, subtitle) {
+  const sub = subtitle ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${subtitle}</span>` : '';
+  return `<div class="compliance-header">
+    <h3>${title}</h3>${sub}
+    <button class="compliance-toggle" onclick="toggleCompliancePanel()" title="Minimise / expand">▼</button>
+  </div>`;
+}
+
+function toggleCompliancePanel() {
+  const cp = document.getElementById('compliancePanel');
+  const btn = cp.querySelector('.compliance-toggle');
+  const minimised = cp.classList.toggle('minimized');
+  if (btn) btn.textContent = minimised ? '▲' : '▼';
+  document.getElementById('mapAreaWrap').className = minimised ? 'map-area full' : 'map-area split';
+  setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
 }
 
 function renderComplianceReport(container, name, route, pts, result) {
   const {violations, gateHits, gatesMissed} = result;
   const km = pts.length > 0 ? ((route.distance||0)/1000).toFixed(0) : '?';
 
-  let html = `
-    <div class="compliance-header">
-      <h3>${tr('compliance_title')} — ${name}</h3>
-      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${pts.length.toLocaleString()} pts · ${km}km</span>
-    </div>
-
+  let html = complianceHeader(`${tr('compliance_title')} — ${name}`, `${pts.length.toLocaleString()} pts · ${km}km`) + `
+    <div class="compliance-body">
     <div class="compliance-summary">
       <div class="summary-stat">
         <span class="num ${violations.length > 0 ? 'red' : 'green'}">${violations.length}</span>
@@ -1611,6 +1640,7 @@ function renderComplianceReport(container, name, route, pts, result) {
       <div class="compliance-summary">`);
   }
 
+  html += `</div>`; // close .compliance-body
   container.innerHTML = html;
 }
 
@@ -2593,6 +2623,7 @@ function loadGPXFile(event, routeName) {
       const fakeRoute = { id: 0, distance: 0 };
       const cp = document.getElementById('compliancePanel');
       cp.style.display = 'block';
+      cp.classList.remove('minimized');
       document.getElementById('mapAreaWrap').className = 'map-area split';
 
       renderComplianceReport(cp, routeName + ' (GPX)', fakeRoute, pts, result);
