@@ -1791,13 +1791,14 @@ async function previewRoute() {
   const segments = routingPts.length - 1;
   let totalDist = 0;
   const allTP = [{lat: routingPts[0].lat, lng: routingPts[0].lng}];
-  let failedSegs = 0;
+  let failedSegs = 0, lastKnownColor = '#888';
 
   for (let i = 0; i < segments; i++) {
     const fw = routingPts[i], tw = routingPts[i+1];
     fill.style.width = Math.round((i/segments)*100) + '%';
     stepEl.textContent = `Segment ${i+1}/${segments}: ${fw.name.split('—')[0].trim()} → ${tw.name.split('—')[0].trim()}`;
-    const color = wpLegColor[fw.id] || wpLegColor[tw.id] || '#888';
+    const color = wpLegColor[fw.id] || wpLegColor[tw.id] || lastKnownColor;
+    if (wpLegColor[fw.id] || wpLegColor[tw.id]) lastKnownColor = color;
     let sc, sd;
     if (fw.type === 'ferry') {
       // Water crossing segment (departing from ferry terminal) — always dashed straight line
