@@ -48,8 +48,9 @@ Nutzen Sie den Erstellen-Tab als **schnelles Entwurfs-Routing-Tool** — wählen
 Setzen Sie eigene Pins an beliebigen Stellen auf der Karte, um persönliche Wegpunkte hinzuzufügen — ein Hotel, ein Umwegpunkt, eine Versorgungsstation oder eine alternative Kreuzung.
 
 - Tippen Sie auf **📌 Pin hinzufügen** auf der Karte, um einen Wegpunkt zu platzieren
-- Benennen Sie jeden Pin — er erscheint im Erstellen-Tab neben Toren und Fähren
-- Pins werden in straßengerouteten Vorschauen und GPX-Exporten einbezogen
+- Benennen Sie jeden Pin — er erscheint im Pins-Tab mit seinem Abstand zur geladenen Route
+- Aktivieren Sie **„Als Routing-Wegpunkt verwenden"** im Pins-Tab, um einen Pin in die straßengeroutete Vorschau und GPX-Exporte einzubeziehen; nicht aktivierte Pins werden gespeichert, aber nicht in die Route aufgenommen
+- Pins werden in der Reihenfolge ihres Auftretens im Pins-Tab einbezogen — zum Neuordnen ziehen
 - Im Browser gespeichert — Pins bleiben zwischen Sitzungen erhalten
 - Nutzen Sie Pins, um Umwege oder Alternativen zu skizzieren, bevor Sie zu einem vollständigen Routing-Tool wechseln
 

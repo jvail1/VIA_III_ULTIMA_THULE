@@ -48,8 +48,9 @@ Use the Create tab as a **quick draft routing tool** — select legs, pick ferri
 Drop custom pins anywhere on the map to add personal waypoints to your route planning — a hotel, a detour point, a resupply stop, or an alternative road junction.
 
 - Tap **📌 Add Pin** on the map to place a waypoint at any location
-- Name each pin and it appears in the Create tab alongside the race gates and ferries
-- Pins are included in road-routed previews and GPX exports as waypoints
+- Name each pin — it appears in the Pins tab with its distance to your loaded route
+- Check **"Use as routing via-point"** on a pin in the Pins tab to include it in road-routed previews and GPX exports; unchecked pins are saved but not routed through
+- Pins are included in routing in the order they appear in the Pins tab — drag to reorder
 - Saved to your browser — pins persist between sessions
 - Use pins to sketch detours or alternatives before committing to a full routing app
 

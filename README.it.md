@@ -48,8 +48,9 @@ Usa la scheda Crea come **strumento di bozza rapida** — seleziona tappe, scegl
 Posiziona segnaposto personalizzati in qualsiasi punto della mappa per aggiungere waypoint personali — un hotel, un punto di deviazione, un rifornimento o un incrocio alternativo.
 
 - Tocca **📌 Aggiungi segnaposto** sulla mappa per posizionare un waypoint
-- Assegna un nome a ogni segnaposto — appariranno nella scheda Crea accanto ai cancelli e ai traghetti
-- I segnaposto sono inclusi nelle anteprime stradali e nelle esportazioni GPX
+- Assegna un nome a ogni segnaposto — apparirà nella scheda Segnaposto con la sua distanza dal percorso caricato
+- Spunta **«Usa come punto di passaggio per il routing»** su un segnaposto nella scheda Segnaposto per includerlo nelle anteprime stradali e nelle esportazioni GPX; i segnaposto non spuntati vengono salvati ma non inclusi nel percorso
+- I segnaposto vengono inclusi nell'ordine in cui appaiono nella scheda Segnaposto — trascina per riordinare
 - Salvati nel browser — persistono tra le sessioni
 - Usa i segnaposto per abbozzare deviazioni o alternative prima di passare a uno strumento di pianificazione completo
 

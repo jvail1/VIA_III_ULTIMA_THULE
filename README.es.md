@@ -48,8 +48,9 @@ Use la pestaña Crear como **herramienta de borrador rápido** — seleccione et
 Coloque marcadores personalizados en cualquier punto del mapa para añadir waypoints personales — un hotel, un punto de desvío, un avituallamiento o un cruce alternativo.
 
 - Pulse **📌 Añadir marcador** en el mapa para colocar un waypoint
-- Asigne un nombre a cada marcador — aparecerán en la pestaña Crear junto a los portones y ferris
-- Los marcadores se incluyen en las vistas previas de rutas y en las exportaciones GPX
+- Asigne un nombre a cada marcador — aparecerá en la pestaña Marcadores con su distancia a la ruta cargada
+- Active **«Usar como punto de paso de ruta»** en un marcador de la pestaña Marcadores para incluirlo en las vistas previas y exportaciones GPX; los marcadores no activados se guardan pero no se incluyen en la ruta
+- Los marcadores se incluyen en el orden en que aparecen en la pestaña Marcadores — arrastre para reordenar
 - Guardados en su navegador — persisten entre sesiones
 - Use los marcadores para trazar desvíos o alternativas antes de pasar a una herramienta de planificación completa
 

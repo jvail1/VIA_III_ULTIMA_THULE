@@ -1,7 +1,7 @@
 // VIA Chapter III — Service Worker
 // Caches app shell + map tiles for offline use
 
-const CACHE_NAME = 'via-chapter3-v3';
+const CACHE_NAME = 'via-chapter3-v4';
 const TILE_CACHE = 'via-tiles-v3';
 
 // App shell — cache on install

@@ -48,8 +48,9 @@ Utilisez l'onglet Créer comme **outil de brouillon rapide** — sélectionnez d
 Posez des épingles n'importe où sur la carte pour ajouter des waypoints personnels — un hôtel, un point de détour, un ravitaillement ou un carrefour alternatif.
 
 - Appuyez sur **📌 Ajouter une épingle** sur la carte pour placer un waypoint
-- Nommez chaque épingle — elles apparaissent dans l'onglet Créer aux côtés des portes et ferries
-- Les épingles sont incluses dans les aperçus routiers et les exports GPX
+- Nommez chaque épingle — elle apparaît dans l'onglet Épingles avec sa distance par rapport à votre itinéraire chargé
+- Cochez **« Utiliser comme point de passage »** sur une épingle dans l'onglet Épingles pour l'inclure dans les aperçus routiers et les exports GPX ; les épingles non cochées sont sauvegardées mais ne sont pas intégrées à l'itinéraire
+- Les épingles sont incluses dans l'ordre où elles apparaissent dans l'onglet Épingles — faites glisser pour réordonner
 - Sauvegardées dans votre navigateur — persistent entre les sessions
 - Utilisez les épingles pour esquisser des détours ou alternatives avant de passer à un outil de routage complet
 

@@ -48,8 +48,9 @@ Gebruik het tabblad Aanmaken als **snelle conceptroutetool** — selecteer etapp
 Zet eigen spelden op de kaart om persoonlijke waypoints toe te voegen — een hotel, een omleidingspunt, een bevoorradingshalte of een alternatief wegkruispunt.
 
 - Tik op **📌 Speld toevoegen** op de kaart om een waypoint te plaatsen
-- Geef elke speld een naam — ze verschijnen in het tabblad Aanmaken naast de poorten en veerponten
-- Spelden worden meegenomen in weggerouteerde voorvertoningen en GPX-exports
+- Geef elke speld een naam — ze verschijnt in het tabblad Spelden met de afstand tot je geladen route
+- Vink **«Als routeringswaypoint gebruiken»** aan op een speld in het tabblad Spelden om deze op te nemen in weggerouteerde voorvertoningen en GPX-exports; niet aangevinkte spelden worden opgeslagen maar niet doorgerouteerd
+- Spelden worden opgenomen in de volgorde zoals ze in het tabblad Spelden verschijnen — sleep om te herordenen
 - Opgeslagen in je browser — spelden blijven bewaard tussen sessies
 - Gebruik spelden om omwegen of alternatieven te schetsen voordat je overgaat naar een volledig routeringsprogramma
 
