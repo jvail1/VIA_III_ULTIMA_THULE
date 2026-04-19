@@ -1755,8 +1755,8 @@ async function previewRoute() {
         L.polyline(sc, {color, weight:3.5, opacity:0.85, interactive:false}).addTo(routeLayerGroup);
         // Wide invisible hit layer — makes the line easy to hover/click
         const hit = L.polyline(sc, {color:'transparent', weight:16, opacity:0, interactive:true});
-        hit.bindTooltip('Click to add via-point', {sticky:true, offset:[10,0]});
-        hit.on('click', e => { L.DomEvent.stopPropagation(e); insertRouteViaPin(e.latlng.lat, e.latlng.lng); });
+        hit.bindTooltip('Click to insert via-point & re-route', {sticky:true, offset:[10,0]});
+        hit.on('click', e => { L.DomEvent.stopPropagation(e); hit.closeTooltip(); insertRouteViaPin(e.latlng.lat, e.latlng.lng); });
         hit.on('mouseover', () => { document.getElementById('mapAreaWrap').classList.add('route-hover'); });
         hit.on('mouseout',  () => { document.getElementById('mapAreaWrap').classList.remove('route-hover'); });
         hit.addTo(routeLayerGroup);
@@ -1993,10 +1993,8 @@ function insertRouteViaPin(lat, lng) {
   userPins.push(pin);
   savePins();
   renderPins();
-  L.circleMarker([lat, lng], {
-    radius: 8, color: 'white', weight: 2, fillColor: '#7c3aed', fillOpacity: 1
-  }).bindTooltip('📌 Via point — re-preview to reroute').addTo(routeLayerGroup);
-  showToast('Via-point added — tap Preview to re-route through it', 'info');
+  showToast('Via-point added — re-routing...', 'info');
+  setTimeout(() => previewRoute(), 300);
 }
 
 function addUserPin(lat, lng, name, note) {
