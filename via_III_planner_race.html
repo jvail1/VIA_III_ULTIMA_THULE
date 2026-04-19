@@ -1810,8 +1810,10 @@ async function previewRoute() {
       const straightM = haversine(fw.lat, fw.lng, tw.lat, tw.lng);
       const res = await osrmRoute(fw, tw);
       const detourRatio = res ? res.distanceM / Math.max(straightM, 1) : Infinity;
+      // Higher ratio for pin segments — fjord detours can be 5–15×, but cross-sea routes via land (e.g. Helsingør→Helsingborg via Germany) are 100×+
       const involvesPin = fw.type === 'pin' || tw.type === 'pin';
-      if (res && (detourRatio <= 4 || involvesPin)) {
+      const maxRatio = involvesPin ? 25 : 4;
+      if (res && detourRatio <= maxRatio) {
         sc = res.coords; sd = res.distanceM;
         L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
         L.polyline(sc, {color, weight:3.5, opacity:0.85}).addTo(routeLayerGroup);
