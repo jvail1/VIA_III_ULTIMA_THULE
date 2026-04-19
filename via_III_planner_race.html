@@ -1751,13 +1751,15 @@ async function previewRoute() {
       const detourRatio = res ? res.distanceM / Math.max(straightM, 1) : Infinity;
       if (res && detourRatio <= 4) {
         sc = res.coords; sd = res.distanceM;
-        L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
-        const poly = L.polyline(sc, {color, weight:3.5, opacity:0.85});
-        poly.bindTooltip('Click to add via-point', {sticky: true, className: 'leaflet-tooltip', offset: [10, 0]});
-        poly.on('click', e => { L.DomEvent.stopPropagation(e); insertRouteViaPin(e.latlng.lat, e.latlng.lng); });
-        poly.on('mouseover', () => { poly.setStyle({weight:5.5, opacity:1}); document.getElementById('mapAreaWrap').classList.add('route-hover'); });
-        poly.on('mouseout',  () => { poly.setStyle({weight:3.5, opacity:0.85}); document.getElementById('mapAreaWrap').classList.remove('route-hover'); });
-        poly.addTo(routeLayerGroup);
+        L.polyline(sc, {color:'white', weight:5.5, opacity:0.25, interactive:false}).addTo(routeLayerGroup);
+        L.polyline(sc, {color, weight:3.5, opacity:0.85, interactive:false}).addTo(routeLayerGroup);
+        // Wide invisible hit layer — makes the line easy to hover/click
+        const hit = L.polyline(sc, {color:'transparent', weight:16, opacity:0, interactive:true});
+        hit.bindTooltip('Click to add via-point', {sticky:true, offset:[10,0]});
+        hit.on('click', e => { L.DomEvent.stopPropagation(e); insertRouteViaPin(e.latlng.lat, e.latlng.lng); });
+        hit.on('mouseover', () => { document.getElementById('mapAreaWrap').classList.add('route-hover'); });
+        hit.on('mouseout',  () => { document.getElementById('mapAreaWrap').classList.remove('route-hover'); });
+        hit.addTo(routeLayerGroup);
       } else {
         if (res && detourRatio > 4) {
           console.log(`Segment ${fw.name} → ${tw.name}: detour ratio ${detourRatio.toFixed(1)}x — treating as water crossing`);
