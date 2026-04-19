@@ -1805,10 +1805,12 @@ async function previewRoute() {
       L.polyline(sc, {color, weight:2.5, opacity:0.75, dashArray:'6 5'}).addTo(routeLayerGroup);
     } else {
       // Land segment — try OSRM, fall back to dashed line if detour ratio too high (water crossing)
+      // Exception: if either endpoint is a user pin, always trust OSRM (user placed it intentionally)
       const straightM = haversine(fw.lat, fw.lng, tw.lat, tw.lng);
       const res = await osrmRoute(fw, tw);
       const detourRatio = res ? res.distanceM / Math.max(straightM, 1) : Infinity;
-      if (res && detourRatio <= 4) {
+      const involvesPin = fw.type === 'pin' || tw.type === 'pin';
+      if (res && (detourRatio <= 4 || involvesPin)) {
         sc = res.coords; sd = res.distanceM;
         L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
         L.polyline(sc, {color, weight:3.5, opacity:0.85}).addTo(routeLayerGroup);
