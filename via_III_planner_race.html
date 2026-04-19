@@ -427,6 +427,7 @@
   #addPinBtn.active { background: rgba(124,58,237,0.9); border-color: #9b6ef5; color: white; }
   .map-area.pin-mode { cursor: crosshair !important; }
   .map-area.pin-mode * { cursor: crosshair !important; }
+  .map-area.route-hover * { cursor: crosshair !important; }
   .pin-popup-form { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
   .pin-popup-form input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px; font-family: 'Barlow', sans-serif; width: 100%; }
   .pin-popup-form textarea { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; font-family: 'Barlow', sans-serif; width: 100%; resize: vertical; min-height: 48px; }
@@ -1752,9 +1753,10 @@ async function previewRoute() {
         sc = res.coords; sd = res.distanceM;
         L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
         const poly = L.polyline(sc, {color, weight:3.5, opacity:0.85});
+        poly.bindTooltip('Click to add via-point', {sticky: true, className: 'leaflet-tooltip', offset: [10, 0]});
         poly.on('click', e => { L.DomEvent.stopPropagation(e); insertRouteViaPin(e.latlng.lat, e.latlng.lng); });
-        poly.on('mouseover', () => { poly.setStyle({weight:5.5, opacity:1}); leafletMap.getContainer().style.cursor = 'crosshair'; });
-        poly.on('mouseout',  () => { poly.setStyle({weight:3.5, opacity:0.85}); leafletMap.getContainer().style.cursor = ''; });
+        poly.on('mouseover', () => { poly.setStyle({weight:5.5, opacity:1}); document.getElementById('mapAreaWrap').classList.add('route-hover'); });
+        poly.on('mouseout',  () => { poly.setStyle({weight:3.5, opacity:0.85}); document.getElementById('mapAreaWrap').classList.remove('route-hover'); });
         poly.addTo(routeLayerGroup);
       } else {
         if (res && detourRatio > 4) {
