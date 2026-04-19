@@ -964,7 +964,7 @@ const wpMap = Object.fromEntries(WPS.map(w => [w.id, w]));
 const GATE_TYPES = new Set(['gate', 'start', 'finish']);
 // All non-gate via waypoints pinned by default
 const pinnedViaWps = new Set(
-  LEGS.flatMap(l => l.wps).filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type))
+  LEGS.flatMap(l => l.wps).filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type) && wpMap[id].type !== 'ferry')
 );
 let routedTrackPoints = null;
 let savedRouteSegments = [];
