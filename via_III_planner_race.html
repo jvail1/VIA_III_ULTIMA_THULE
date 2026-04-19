@@ -394,17 +394,19 @@
   .via-item.on { background: #eef4fb; border-color: var(--accent2); color: var(--accent2); }
   .via-item .via-check { font-size: 9px; }
   #ferrySelector { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
-  .ferry-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); background: white; cursor: pointer; transition: all 0.12s; user-select: none; }
-  .ferry-row:hover { border-color: #6b4a1a; background: #fdf8f2; }
-  .ferry-row.on { background: #fdf2e4; border-color: #6b4a1a; }
+  .ferry-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 4px; border: 1px solid #c3dfc3; background: #f5fbf5; cursor: pointer; transition: all 0.12s; user-select: none; }
+  .ferry-row:hover { border-color: #1e7a2e; background: #eaf6ea; }
+  .ferry-row.on { background: #d6f0d6; border-color: #1e7a2e; }
   .ferry-row.inactive { opacity: 0.4; pointer-events: none; }
-  .ferry-check { font-size: 13px; color: #6b4a1a; font-family: 'DM Mono', monospace; width: 14px; flex-shrink: 0; margin-top: 1px; }
-  .ferry-row:not(.on) .ferry-check { color: var(--muted); }
+  .ferry-row.banned { background: #fdf0f0; border-color: #e8b4b4; cursor: default; pointer-events: none; }
+  .ferry-check { font-size: 14px; flex-shrink: 0; margin-top: 0px; width: 16px; text-align: center; }
   .ferry-info { flex: 1; min-width: 0; }
-  .ferry-name { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ferry-row.on .ferry-name { color: #6b4a1a; }
+  .ferry-name { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600; color: #1a5c28; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ferry-row.on .ferry-name { color: #1e7a2e; }
+  .ferry-row.banned .ferry-name { color: #9b2222; }
   .ferry-meta { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 1px; }
-  .ferry-leg { display: inline-block; background: var(--border); color: var(--ink); padding: 0 4px; border-radius: 2px; font-size: 9px; margin-right: 3px; }
+  .ferry-leg { display: inline-block; background: #c3dfc3; color: #1a5c28; padding: 0 4px; border-radius: 2px; font-size: 9px; margin-right: 3px; }
+  .ferry-row.banned .ferry-leg { background: #e8b4b4; color: #9b2222; }
   .ferry-warn { font-family: 'DM Mono', monospace; font-size: 9px; color: #b8860b; margin-top: 2px; }
   #routingOverlay { position:absolute;inset:0;background:rgba(15,15,15,0.82);z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px; }
   #routingOverlay.active { display:flex; }
@@ -2391,15 +2393,16 @@ LEGS.forEach(l => l.wps.forEach(id => { if (wpMap[id]?.type === 'ferry' && !FERR
 
 function renderFerries() {
   const allFerries = WPS.filter(w => w.type === 'ferry');
-  document.getElementById('ferrySelector').innerHTML = allFerries.map(f => {
+  const bannedFerries = BANNED.filter(b => b.type === 'ferry');
+
+  const permittedHtml = allFerries.map(f => {
     const legId = FERRY_LEG[f.id];
     const legActive = !legId || selLegs.has(legId);
     const on = pinnedViaWps.has(f.id);
     const warnTag = f.tags.find(t => t.c === 'warning');
-    // Strip "Permitted ✅" prefix and take first sentence for compact note
     const shortNote = f.note.replace(/Permitted ✅[. —–-]*/,'').split('.')[0].trim();
     return `<div class="ferry-row ${on?'on':''} ${!legActive?'inactive':''}" onclick="toggleViaWp('${f.id}')">
-      <div class="ferry-check">${on?'✓':'○'}</div>
+      <div class="ferry-check" style="color:${on?'#1e7a2e':'#aaa'}">${on?'✓':'○'}</div>
       <div class="ferry-info">
         <div class="ferry-name">⛴ ${f.name}</div>
         <div class="ferry-meta">${legId?`<span class="ferry-leg">${legId}</span>`:''}${f.country}${shortNote?' · '+shortNote:''}</div>
@@ -2407,6 +2410,19 @@ function renderFerries() {
       </div>
     </div>`;
   }).join('');
+
+  const bannedHtml = bannedFerries.map(b => {
+    const shortNote = b.note.split('.')[0].replace(/\(BANNED\)/,'').trim();
+    return `<div class="ferry-row banned">
+      <div class="ferry-check" style="color:#c8410a">⊘</div>
+      <div class="ferry-info">
+        <div class="ferry-name">⛴ ${b.name.replace(' (BANNED)','')}</div>
+        <div class="ferry-meta" style="color:#c06060">${shortNote}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ferrySelector').innerHTML = permittedHtml + bannedHtml;
 }
 
 function toggleViaWp(id) {
