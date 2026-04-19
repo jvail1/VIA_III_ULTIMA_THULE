@@ -427,7 +427,6 @@
   #addPinBtn.active { background: rgba(124,58,237,0.9); border-color: #9b6ef5; color: white; }
   .map-area.pin-mode { cursor: crosshair !important; }
   .map-area.pin-mode * { cursor: crosshair !important; }
-  .map-area.route-hover * { cursor: crosshair !important; }
   .pin-popup-form { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
   .pin-popup-form input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px; font-family: 'Barlow', sans-serif; width: 100%; }
   .pin-popup-form textarea { padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; font-family: 'Barlow', sans-serif; width: 100%; resize: vertical; min-height: 48px; }
@@ -1751,15 +1750,8 @@ async function previewRoute() {
       const detourRatio = res ? res.distanceM / Math.max(straightM, 1) : Infinity;
       if (res && detourRatio <= 4) {
         sc = res.coords; sd = res.distanceM;
-        L.polyline(sc, {color:'white', weight:5.5, opacity:0.25, interactive:false}).addTo(routeLayerGroup);
-        L.polyline(sc, {color, weight:3.5, opacity:0.85, interactive:false}).addTo(routeLayerGroup);
-        // Wide invisible hit layer — makes the line easy to hover/click
-        const hit = L.polyline(sc, {color:'transparent', weight:16, opacity:0, interactive:true});
-        hit.bindTooltip('Click to insert via-point & re-route', {sticky:true, offset:[10,0]});
-        hit.on('click', e => { L.DomEvent.stopPropagation(e); hit.closeTooltip(); insertRouteViaPin(e.latlng.lat, e.latlng.lng); });
-        hit.on('mouseover', () => { document.getElementById('mapAreaWrap').classList.add('route-hover'); });
-        hit.on('mouseout',  () => { document.getElementById('mapAreaWrap').classList.remove('route-hover'); });
-        hit.addTo(routeLayerGroup);
+        L.polyline(sc, {color:'white', weight:5.5, opacity:0.25}).addTo(routeLayerGroup);
+        L.polyline(sc, {color, weight:3.5, opacity:0.85}).addTo(routeLayerGroup);
       } else {
         if (res && detourRatio > 4) {
           console.log(`Segment ${fw.name} → ${tw.name}: detour ratio ${detourRatio.toFixed(1)}x — treating as water crossing`);
@@ -1979,22 +1971,6 @@ function injectRoutingPins(pts) {
     }
   }
   return result;
-}
-
-function insertRouteViaPin(lat, lng) {
-  const pin = {
-    id: 'pin-' + Date.now(),
-    lat, lng,
-    name: 'Via point',
-    note: '',
-    routeDistM: null,
-    useAsWaypoint: true,
-  };
-  userPins.push(pin);
-  savePins();
-  renderPins();
-  showToast('Via-point added — re-routing...', 'info');
-  setTimeout(() => previewRoute(), 300);
 }
 
 function addUserPin(lat, lng, name, note) {
