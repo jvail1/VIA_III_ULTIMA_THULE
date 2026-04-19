@@ -50,8 +50,6 @@ Ouvrez l'application directement dans votre navigateur — aucune installation, 
 
 Connectez-vous avec votre adresse e-mail et mot de passe **RideWithGPS**. Les identifiants sont envoyés directement à `ridewithgps.com/users/current.json` — cette application ne les voit ni ne les stocke jamais. Seul le `auth_token` renvoyé est sauvegardé dans le `localStorage` de votre navigateur pour la session.
 
-La clé API intégrée (`eeee8a09`) est la clé d'application publique VIA pour RideWithGPS.
-
 ---
 
 ## Règles de course encodées

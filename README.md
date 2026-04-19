@@ -50,8 +50,6 @@ Open the app directly in your browser — no install, no server, no dependencies
 
 Sign in with your **RideWithGPS** email and password. Credentials are sent directly to `ridewithgps.com/users/current.json` — this app never sees or stores them. Only the returned `auth_token` is saved in your browser's `localStorage` for the session.
 
-The embedded API key (`eeee8a09`) is the public VIA race application key for RideWithGPS.
-
 ---
 
 ## Race Rules Encoded

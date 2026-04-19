@@ -50,8 +50,6 @@ Basiert auf [RideWithGPS](https://ridewithgps.com), [Leaflet.js](https://leaflet
 
 Melden Sie sich mit Ihrer **RideWithGPS**-E-Mail-Adresse und Ihrem Passwort an. Zugangsdaten werden direkt an `ridewithgps.com/users/current.json` gesendet — diese App sieht oder speichert sie nie. Nur das zurückgegebene `auth_token` wird im `localStorage` Ihres Browsers für die Sitzung gespeichert.
 
-Der eingebettete API-Schlüssel (`eeee8a09`) ist der öffentliche VIA-Anwendungsschlüssel für RideWithGPS.
-
 ---
 
 ## Kodierte Rennregeln

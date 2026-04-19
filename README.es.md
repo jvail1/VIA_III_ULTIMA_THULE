@@ -50,8 +50,6 @@ Abra la aplicación directamente en su navegador — sin instalación, sin servi
 
 Inicie sesión con su correo electrónico y contraseña de **RideWithGPS**. Las credenciales se envían directamente a `ridewithgps.com/users/current.json` — esta aplicación nunca las ve ni las almacena. Solo el `auth_token` devuelto se guarda en el `localStorage` de su navegador durante la sesión.
 
-La clave API integrada (`eeee8a09`) es la clave pública de aplicación VIA para RideWithGPS.
-
 ---
 
 ## Reglas de carrera codificadas

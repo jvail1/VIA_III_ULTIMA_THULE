@@ -50,8 +50,6 @@ Apri l'applicazione direttamente nel browser — nessuna installazione, nessun s
 
 Accedi con la tua email e password di **RideWithGPS**. Le credenziali vengono inviate direttamente a `ridewithgps.com/users/current.json` — questa app non le vede né le memorizza mai. Solo il `auth_token` restituito viene salvato nel `localStorage` del browser per la sessione.
 
-La chiave API incorporata (`eeee8a09`) è la chiave pubblica dell'applicazione VIA per RideWithGPS.
-
 ---
 
 ## Regole di gara codificate

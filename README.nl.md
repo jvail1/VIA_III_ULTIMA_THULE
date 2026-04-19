@@ -50,8 +50,6 @@ Open de app direct in je browser — geen installatie, geen server, geen afhanke
 
 Meld je aan met je **RideWithGPS** e-mail en wachtwoord. Inloggegevens worden rechtstreeks naar `ridewithgps.com/users/current.json` gestuurd — deze app ziet of slaat ze nooit op. Alleen het teruggegeven `auth_token` wordt opgeslagen in de `localStorage` van je browser voor de sessie.
 
-De ingebouwde API-sleutel (`eeee8a09`) is de publieke VIA-race applicatiesleutel voor RideWithGPS.
-
 ---
 
 ## Ingevoerde Raceregels
