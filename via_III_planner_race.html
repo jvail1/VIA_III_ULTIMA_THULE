@@ -393,6 +393,19 @@
   .via-item:hover { border-color: var(--accent2); color: var(--ink); }
   .via-item.on { background: #eef4fb; border-color: var(--accent2); color: var(--accent2); }
   .via-item .via-check { font-size: 9px; }
+  #ferrySelector { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
+  .ferry-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); background: white; cursor: pointer; transition: all 0.12s; user-select: none; }
+  .ferry-row:hover { border-color: #6b4a1a; background: #fdf8f2; }
+  .ferry-row.on { background: #fdf2e4; border-color: #6b4a1a; }
+  .ferry-row.inactive { opacity: 0.4; pointer-events: none; }
+  .ferry-check { font-size: 13px; color: #6b4a1a; font-family: 'DM Mono', monospace; width: 14px; flex-shrink: 0; margin-top: 1px; }
+  .ferry-row:not(.on) .ferry-check { color: var(--muted); }
+  .ferry-info { flex: 1; min-width: 0; }
+  .ferry-name { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ferry-row.on .ferry-name { color: #6b4a1a; }
+  .ferry-meta { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 1px; }
+  .ferry-leg { display: inline-block; background: var(--border); color: var(--ink); padding: 0 4px; border-radius: 2px; font-size: 9px; margin-right: 3px; }
+  .ferry-warn { font-family: 'DM Mono', monospace; font-size: 9px; color: #b8860b; margin-top: 2px; }
   #routingOverlay { position:absolute;inset:0;background:rgba(15,15,15,0.82);z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px; }
   #routingOverlay.active { display:flex; }
   .routing-title { font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--paper); }
@@ -561,6 +574,8 @@
           <input class="input-field" type="text" id="newRouteName" value="VIA Chapter III — Ultima Thule">
           <div class="section-label" data-i18n="create_select_legs">Select Legs</div>
           <div id="legSelector"></div>
+          <div class="section-label" data-i18n="create_ferries">⛴ Ferries</div>
+          <div id="ferrySelector"></div>
           <div class="section-label" data-i18n="create_road_routing">Road Routing</div>
           <button class="btn-full green" id="previewBtn" onclick="previewRoute()" data-i18n="btn_preview">🗺 Preview on Road Network</button>
           <div class="section-label" style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px" data-i18n="create_export">Export</div>
@@ -640,7 +655,7 @@ const TRANSLATIONS = {
     detail_default:'Select a route to inspect',search_placeholder:'Search your routes...',loading_routes:'Loading routes...',badge_pending:'○ not inspected',btn_inspect:'Inspect Route',routes_empty:'No routes found.<br>Create one in the Create tab!',btn_retry:'Retry',routes_fallback_hint:'Inspect by route ID instead:',routes_id_placeholder:'Route ID from RWGPS URL',
     gpx_upload_title:'Upload your GPX route',gpx_upload_hint:'Export your route from Komoot, Garmin, Wahoo, or any other tool as a GPX file and upload it here for a full compliance check.',gpx_choose:'Choose GPX file',gpx_sub:'.gpx files from any routing tool',
     pins_hint:'Click <strong>📌 Add Pin</strong> on the map to drop a personal waypoint. Pins are saved to your browser and persist between sessions.',btn_clear_pins:'Clear all pins',pins_empty_msg:'No pins yet.<br>Click <strong>📌 Add Pin</strong> on the map<br>to drop your first waypoint.',
-    create_route_name:'Route Name',create_select_legs:'Select Legs',create_road_routing:'Road Routing',create_export:'Export',btn_preview:'🗺 Preview on Road Network',btn_push_rwgps:'✚ Push to RideWithGPS',btn_download_gpx:'⬇ Download GPX (Road-Routed)',
+    create_route_name:'Route Name',create_select_legs:'Select Legs',create_ferries:'⛴ Ferries',create_road_routing:'Road Routing',create_export:'Export',btn_preview:'🗺 Preview on Road Network',btn_push_rwgps:'✚ Push to RideWithGPS',btn_download_gpx:'⬇ Download GPX (Road-Routed)',
     compliance_title:'Compliance Report',compliance_violations:'Violations',compliance_gates_missed_lbl:'Gates missed',compliance_gates_hit_lbl:'Gates hit',compliance_rules_checked:'Rules checked',compliance_banned_tunnels:'⛔ Banned Tunnels Used',compliance_banned_roads:'⛔ Banned Road Sections Used',compliance_banned_ferries:'⛔ Banned Ferries Used',compliance_gates_missed_section:'⚠️ Gates Not Visited',compliance_gate_coverage:'Gate Coverage',compliance_all_clear_title:'Route is compliant!',compliance_all_clear_body:'No banned tunnels, roads or ferries detected.<br>All {n} mandatory gates visited.',compliance_no_track:'No track points found in this route.<br>Route may be waypoints-only. Add a full path in RideWithGPS first.',
     closest_approach_tunnel:'Closest approach: {n}m from tunnel entrance ({lat}, {lng})',closest_approach:'Closest approach: {n}m ({lat}, {lng})',gate_missed_detail:'Route does not pass within {r}m of this gate. Closest approach: {d} away.',
     btn_view_maps:'View on Maps ↗',btn_reroute:'Reroute from here ↗',btn_route_to_gate:'Route to this gate ↗',
@@ -658,7 +673,7 @@ const TRANSLATIONS = {
     detail_default:"Sélectionnez un itinéraire à inspecter",search_placeholder:"Rechercher vos itinéraires...",loading_routes:"Chargement des itinéraires...",badge_pending:"○ non inspecté",btn_inspect:"Inspecter l'itinéraire",routes_empty:"Aucun itinéraire trouvé.<br>Créez-en un dans l'onglet Créer !",btn_retry:"Réessayer",routes_fallback_hint:"Inspecter par ID d'itinéraire :",routes_id_placeholder:"ID depuis l'URL RWGPS",
     gpx_upload_title:"Importer votre itinéraire GPX",gpx_upload_hint:"Exportez votre itinéraire depuis Komoot, Garmin, Wahoo ou tout autre outil en fichier GPX et importez-le ici pour une vérification complète.",gpx_choose:"Choisir un fichier GPX",gpx_sub:"Fichiers .gpx depuis n'importe quel outil",
     pins_hint:"Cliquez sur <strong>📌 Ajouter une épingle</strong> sur la carte pour poser un point personnel. Les épingles sont sauvegardées dans votre navigateur.",btn_clear_pins:"Supprimer toutes les épingles",pins_empty_msg:"Aucune épingle.<br>Cliquez sur <strong>📌 Ajouter une épingle</strong><br>sur la carte.",
-    create_route_name:"Nom de l'itinéraire",create_select_legs:"Sélectionner les tronçons",create_road_routing:"Calcul d'itinéraire routier",create_export:"Exporter",btn_preview:"🗺 Aperçu sur le réseau routier",btn_push_rwgps:"✚ Envoyer sur RideWithGPS",btn_download_gpx:"⬇ Télécharger GPX (routé)",
+    create_route_name:"Nom de l'itinéraire",create_select_legs:"Sélectionner les tronçons",create_ferries:"⛴ Ferries",create_road_routing:"Calcul d'itinéraire routier",create_export:"Exporter",btn_preview:"🗺 Aperçu sur le réseau routier",btn_push_rwgps:"✚ Envoyer sur RideWithGPS",btn_download_gpx:"⬇ Télécharger GPX (routé)",
     compliance_title:"Rapport de conformité",compliance_violations:"Infractions",compliance_gates_missed_lbl:"Points manqués",compliance_gates_hit_lbl:"Points validés",compliance_rules_checked:"Règles vérifiées",compliance_banned_tunnels:"⛔ Tunnels interdits empruntés",compliance_banned_roads:"⛔ Sections de routes interdites",compliance_banned_ferries:"⛔ Ferries interdits empruntés",compliance_gates_missed_section:"⚠️ Points de passage non visités",compliance_gate_coverage:"Couverture des points de passage",compliance_all_clear_title:"Itinéraire conforme !",compliance_all_clear_body:"Aucun tunnel, route ou ferry interdit détecté.<br>Les {n} points de passage obligatoires ont été visités.",compliance_no_track:"Aucun point de trace trouvé.<br>L'itinéraire ne contient peut-être que des waypoints. Ajoutez un tracé complet dans RideWithGPS.",
     closest_approach_tunnel:"Approche la plus proche : {n}m de l'entrée du tunnel ({lat}, {lng})",closest_approach:"Approche la plus proche : {n}m ({lat}, {lng})",gate_missed_detail:"L'itinéraire ne passe pas à moins de {r}m de ce point. Approche la plus proche : {d}.",
     btn_view_maps:"Voir sur Maps ↗",btn_reroute:"Recalculer depuis ici ↗",btn_route_to_gate:"Itinéraire vers ce point ↗",
@@ -676,7 +691,7 @@ const TRANSLATIONS = {
     detail_default:"Route zur Prüfung auswählen",search_placeholder:"Routen suchen...",loading_routes:"Routen werden geladen...",badge_pending:"○ nicht geprüft",btn_inspect:"Route prüfen",routes_empty:"Keine Routen gefunden.<br>Erstellen Sie eine im Tab \u201eErstellen\u201c!",btn_retry:"Erneut versuchen",routes_fallback_hint:"Nach Routen-ID suchen:",routes_id_placeholder:"Routen-ID aus der RWGPS-URL",
     gpx_upload_title:"GPX-Route hochladen",gpx_upload_hint:"Exportieren Sie Ihre Route aus Komoot, Garmin, Wahoo oder einem anderen Tool als GPX-Datei und laden Sie sie hier für eine vollständige Konformitätsprüfung hoch.",gpx_choose:"GPX-Datei auswählen",gpx_sub:".gpx-Dateien von jedem Routing-Tool",
     pins_hint:"Klicken Sie auf <strong>📌 Pin hinzufügen</strong> auf der Karte, um einen persönlichen Wegpunkt zu setzen. Pins werden in Ihrem Browser gespeichert.",btn_clear_pins:"Alle Pins löschen",pins_empty_msg:"Noch keine Pins.<br>Klicken Sie auf <strong>📌 Pin hinzufügen</strong><br>auf der Karte.",
-    create_route_name:"Routenname",create_select_legs:"Etappen auswählen",create_road_routing:"Straßen-Routing",create_export:"Exportieren",btn_preview:"🗺 Vorschau im Straßennetz",btn_push_rwgps:"✚ An RideWithGPS senden",btn_download_gpx:"⬇ GPX herunterladen (geroutet)",
+    create_route_name:"Routenname",create_select_legs:"Etappen auswählen",create_ferries:"⛴ Fähren",create_road_routing:"Straßen-Routing",create_export:"Exportieren",btn_preview:"🗺 Vorschau im Straßennetz",btn_push_rwgps:"✚ An RideWithGPS senden",btn_download_gpx:"⬇ GPX herunterladen (geroutet)",
     compliance_title:"Konformitätsbericht",compliance_violations:"Verstöße",compliance_gates_missed_lbl:"Punkte verpasst",compliance_gates_hit_lbl:"Punkte erreicht",compliance_rules_checked:"Regeln geprüft",compliance_banned_tunnels:"⛔ Verbotene Tunnel benutzt",compliance_banned_roads:"⛔ Verbotene Straßenabschnitte",compliance_banned_ferries:"⛔ Verbotene Fähren benutzt",compliance_gates_missed_section:"⚠️ Nicht besuchte Pflichtpunkte",compliance_gate_coverage:"Pflichtpunkt-Abdeckung",compliance_all_clear_title:"Route ist konform!",compliance_all_clear_body:"Keine verbotenen Tunnel, Straßen oder Fähren erkannt.<br>Alle {n} Pflichtpunkte wurden besucht.",compliance_no_track:"Keine Trackpunkte gefunden.<br>Die Route enthält möglicherweise nur Wegpunkte. Fügen Sie einen vollständigen Pfad in RideWithGPS hinzu.",
     closest_approach_tunnel:"Nächste Annäherung: {n}m zum Tunneleingang ({lat}, {lng})",closest_approach:"Nächste Annäherung: {n}m ({lat}, {lng})",gate_missed_detail:"Die Route kommt nicht näher als {r}m an diesen Punkt. Nächste Annäherung: {d}.",
     btn_view_maps:"Auf Maps anzeigen ↗",btn_reroute:"Von hier umleiten ↗",btn_route_to_gate:"Zum Pflichtpunkt navigieren ↗",
@@ -694,7 +709,7 @@ const TRANSLATIONS = {
     detail_default:"Seleccione una ruta para inspeccionar",search_placeholder:"Buscar rutas...",loading_routes:"Cargando rutas...",badge_pending:"○ no inspeccionada",btn_inspect:"Inspeccionar ruta",routes_empty:"No se encontraron rutas.<br>¡Crea una en la pestaña Crear!",btn_retry:"Reintentar",routes_fallback_hint:"Inspeccionar por ID de ruta:",routes_id_placeholder:"ID de ruta desde la URL de RWGPS",
     gpx_upload_title:"Cargar su ruta GPX",gpx_upload_hint:"Exporte su ruta desde Komoot, Garmin, Wahoo u otra herramienta como archivo GPX y cárguela aquí para una comprobación completa.",gpx_choose:"Elegir archivo GPX",gpx_sub:"Archivos .gpx desde cualquier herramienta",
     pins_hint:"Haga clic en <strong>📌 Añadir marcador</strong> en el mapa para colocar un punto personal. Los marcadores se guardan en su navegador.",btn_clear_pins:"Borrar todos los marcadores",pins_empty_msg:"Sin marcadores todavía.<br>Haga clic en <strong>📌 Añadir marcador</strong><br>en el mapa.",
-    create_route_name:"Nombre de la ruta",create_select_legs:"Seleccionar tramos",create_road_routing:"Enrutamiento por carretera",create_export:"Exportar",btn_preview:"🗺 Vista previa en red de carreteras",btn_push_rwgps:"✚ Enviar a RideWithGPS",btn_download_gpx:"⬇ Descargar GPX (enrutado)",
+    create_route_name:"Nombre de la ruta",create_select_legs:"Seleccionar tramos",create_ferries:"⛴ Ferrys",create_road_routing:"Enrutamiento por carretera",create_export:"Exportar",btn_preview:"🗺 Vista previa en red de carreteras",btn_push_rwgps:"✚ Enviar a RideWithGPS",btn_download_gpx:"⬇ Descargar GPX (enrutado)",
     compliance_title:"Informe de conformidad",compliance_violations:"Infracciones",compliance_gates_missed_lbl:"Portones perdidos",compliance_gates_hit_lbl:"Portones alcanzados",compliance_rules_checked:"Reglas verificadas",compliance_banned_tunnels:"⛔ Túneles prohibidos utilizados",compliance_banned_roads:"⛔ Tramos de carretera prohibidos",compliance_banned_ferries:"⛔ Ferrys prohibidos utilizados",compliance_gates_missed_section:"⚠️ Portones no visitados",compliance_gate_coverage:"Cobertura de portones",compliance_all_clear_title:"¡Ruta conforme!",compliance_all_clear_body:"No se detectaron túneles, carreteras ni ferrys prohibidos.<br>Los {n} portones obligatorios han sido visitados.",compliance_no_track:"No se encontraron puntos de traza.<br>La ruta puede contener solo waypoints. Añada un trazado completo en RideWithGPS.",
     closest_approach_tunnel:"Aproximación más cercana: {n}m desde la entrada del túnel ({lat}, {lng})",closest_approach:"Aproximación más cercana: {n}m ({lat}, {lng})",gate_missed_detail:"La ruta no pasa a menos de {r}m de este portón. Aproximación más cercana: {d}.",
     btn_view_maps:"Ver en Maps ↗",btn_reroute:"Recalcular desde aquí ↗",btn_route_to_gate:"Ruta hacia este portón ↗",
@@ -712,7 +727,7 @@ const TRANSLATIONS = {
     detail_default:"Selecteer een route om te inspecteren",search_placeholder:"Zoek je routes...",loading_routes:"Routes laden...",badge_pending:"○ niet geïnspecteerd",btn_inspect:"Route inspecteren",routes_empty:"Geen routes gevonden.<br>Maak er een aan in het tabblad Aanmaken!",btn_retry:"Opnieuw proberen",routes_fallback_hint:"Inspecteren op route-ID:",routes_id_placeholder:"Route-ID uit de RWGPS-URL",
     gpx_upload_title:"Upload je GPX-route",gpx_upload_hint:"Exporteer je route vanuit Komoot, Garmin, Wahoo of een ander programma als GPX-bestand en upload het hier voor een volledige compliancecontrole.",gpx_choose:"GPX-bestand kiezen",gpx_sub:".gpx-bestanden van elk routeringsprogramma",
     pins_hint:"Klik op <strong>📌 Speld toevoegen</strong> op de kaart om een persoonlijk waypoint te plaatsen. Spelden worden in je browser opgeslagen en blijven bewaard tussen sessies.",btn_clear_pins:"Alle spelden verwijderen",pins_empty_msg:"Nog geen spelden.<br>Klik op <strong>📌 Speld toevoegen</strong> op de kaart<br>om je eerste waypoint te plaatsen.",
-    create_route_name:"Routenaam",create_select_legs:"Etappes selecteren",create_road_routing:"Wegnavigatie",create_export:"Exporteren",btn_preview:"🗺 Voorvertoning op wegnetwerk",btn_push_rwgps:"✚ Naar RideWithGPS sturen",btn_download_gpx:"⬇ GPX downloaden (weggeroute)",
+    create_route_name:"Routenaam",create_select_legs:"Etappes selecteren",create_ferries:"⛴ Veerboten",create_road_routing:"Wegnavigatie",create_export:"Exporteren",btn_preview:"🗺 Voorvertoning op wegnetwerk",btn_push_rwgps:"✚ Naar RideWithGPS sturen",btn_download_gpx:"⬇ GPX downloaden (weggeroute)",
     compliance_title:"Compliancerapport",compliance_violations:"Overtredingen",compliance_gates_missed_lbl:"Poorten gemist",compliance_gates_hit_lbl:"Poorten bezocht",compliance_rules_checked:"Regels gecontroleerd",compliance_banned_tunnels:"⛔ Verboden tunnels gebruikt",compliance_banned_roads:"⛔ Verboden weggedeelten gebruikt",compliance_banned_ferries:"⛔ Verboden veerponten gebruikt",compliance_gates_missed_section:"⚠️ Niet bezochte poorten",compliance_gate_coverage:"Poortdekking",compliance_all_clear_title:"Route is compliant!",compliance_all_clear_body:"Geen verboden tunnels, wegen of veerponten gevonden.<br>Alle {n} verplichte poorten bezocht.",compliance_no_track:"Geen trackpunten gevonden in deze route.<br>Route bevat mogelijk alleen waypoints. Voeg eerst een volledig pad toe in RideWithGPS.",
     closest_approach_tunnel:"Dichtstbijzijnde nadering: {n}m van de tunnelentree ({lat}, {lng})",closest_approach:"Dichtstbijzijnde nadering: {n}m ({lat}, {lng})",gate_missed_detail:"Route komt niet binnen {r}m van deze poort. Dichtstbijzijnde nadering: {d}.",
     btn_view_maps:"Bekijk op Maps ↗",btn_reroute:"Herroute vanaf hier ↗",btn_route_to_gate:"Navigeer naar deze poort ↗",
@@ -730,7 +745,7 @@ const TRANSLATIONS = {
     detail_default:"Seleziona un percorso da ispezionare",search_placeholder:"Cerca i tuoi percorsi...",loading_routes:"Caricamento percorsi...",badge_pending:"○ non ispezionato",btn_inspect:"Ispeziona percorso",routes_empty:"Nessun percorso trovato.<br>Creane uno nella scheda Crea!",btn_retry:"Riprova",routes_fallback_hint:"Ispeziona per ID percorso:",routes_id_placeholder:"ID percorso dall'URL RWGPS",
     gpx_upload_title:"Carica il tuo percorso GPX",gpx_upload_hint:"Esporta il tuo percorso da Komoot, Garmin, Wahoo o qualsiasi altro strumento come file GPX e caricalo qui per un controllo completo.",gpx_choose:"Scegli file GPX",gpx_sub:"File .gpx da qualsiasi strumento",
     pins_hint:"Fai clic su <strong>📌 Aggiungi segnaposto</strong> sulla mappa per posizionare un waypoint personale. I segnaposto vengono salvati nel tuo browser.",btn_clear_pins:"Rimuovi tutti i segnaposto",pins_empty_msg:"Nessun segnaposto ancora.<br>Fai clic su <strong>📌 Aggiungi segnaposto</strong><br>sulla mappa.",
-    create_route_name:"Nome del percorso",create_select_legs:"Seleziona tappe",create_road_routing:"Calcolo percorso stradale",create_export:"Esporta",btn_preview:"🗺 Anteprima sulla rete stradale",btn_push_rwgps:"✚ Invia a RideWithGPS",btn_download_gpx:"⬇ Scarica GPX (con percorso stradale)",
+    create_route_name:"Nome del percorso",create_select_legs:"Seleziona tappe",create_ferries:"⛴ Traghetti",create_road_routing:"Calcolo percorso stradale",create_export:"Esporta",btn_preview:"🗺 Anteprima sulla rete stradale",btn_push_rwgps:"✚ Invia a RideWithGPS",btn_download_gpx:"⬇ Scarica GPX (con percorso stradale)",
     compliance_title:"Rapporto di conformità",compliance_violations:"Violazioni",compliance_gates_missed_lbl:"Cancelli mancati",compliance_gates_hit_lbl:"Cancelli raggiunti",compliance_rules_checked:"Regole verificate",compliance_banned_tunnels:"⛔ Tunnel vietati utilizzati",compliance_banned_roads:"⛔ Tratti stradali vietati",compliance_banned_ferries:"⛔ Traghetti vietati utilizzati",compliance_gates_missed_section:"⚠️ Cancelli non visitati",compliance_gate_coverage:"Copertura cancelli",compliance_all_clear_title:"Percorso conforme!",compliance_all_clear_body:"Nessun tunnel, strada o traghetto vietato rilevato.<br>Tutti i {n} cancelli obbligatori sono stati visitati.",compliance_no_track:"Nessun punto traccia trovato.<br>Il percorso potrebbe contenere solo waypoint. Aggiungi un tracciato completo in RideWithGPS.",
     closest_approach_tunnel:"Avvicinamento più vicino: {n}m dall'ingresso del tunnel ({lat}, {lng})",closest_approach:"Avvicinamento più vicino: {n}m ({lat}, {lng})",gate_missed_detail:"Il percorso non passa entro {r}m da questo cancello. Avvicinamento più vicino: {d}.",
     btn_view_maps:"Vedi su Maps ↗",btn_reroute:"Ricalcola da qui ↗",btn_route_to_gate:"Percorso verso questo cancello ↗",
@@ -2299,13 +2314,14 @@ async function showGateWeather(lat, lng) {
 // ── LEGS ──────────────────────────────────────────────────────
 function renderLegs() {
   document.getElementById('legSelector').innerHTML = LEGS.map((l,li) => {
-    const viaIds = l.wps.filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type));
+    // Show only non-ferry, non-gate vias (e.g. refuge) — ferries shown in ferry panel
+    const viaIds = l.wps.filter(id => wpMap[id] && !GATE_TYPES.has(wpMap[id].type) && wpMap[id].type !== 'ferry');
     const viaHtml = selLegs.has(l.id) && viaIds.length ? `
       <div class="leg-vias" onclick="event.stopPropagation()">
         ${viaIds.map(id => {
           const w = wpMap[id];
           const on = pinnedViaWps.has(id);
-          const icon = w.type === 'ferry' ? '⛴' : w.type === 'refuge' ? '🏕' : '📍';
+          const icon = w.type === 'refuge' ? '🏕' : '📍';
           return `<div class="via-item ${on?'on':''}" onclick="toggleViaWp('${id}')">
             <span class="via-check">${on?'✓':'○'}</span>${icon} ${w.name.split('—')[0].split(',')[0].trim()}
           </div>`;
@@ -2318,6 +2334,32 @@ function renderLegs() {
       <div class="leg-label">${l.name}</div>
       <div class="leg-dist">${l.dist}</div>
     </div>${viaHtml}`;
+  }).join('');
+  renderFerries();
+}
+
+// ── FERRY SELECTOR ────────────────────────────────────────────
+// Build a lookup: ferry id → leg id (first leg that contains it)
+const FERRY_LEG = {};
+LEGS.forEach(l => l.wps.forEach(id => { if (wpMap[id]?.type === 'ferry' && !FERRY_LEG[id]) FERRY_LEG[id] = l.id; }));
+
+function renderFerries() {
+  const allFerries = WPS.filter(w => w.type === 'ferry');
+  document.getElementById('ferrySelector').innerHTML = allFerries.map(f => {
+    const legId = FERRY_LEG[f.id];
+    const legActive = !legId || selLegs.has(legId);
+    const on = pinnedViaWps.has(f.id);
+    const warnTag = f.tags.find(t => t.c === 'warning');
+    // Strip "Permitted ✅" prefix and take first sentence for compact note
+    const shortNote = f.note.replace(/Permitted ✅[. —–-]*/,'').split('.')[0].trim();
+    return `<div class="ferry-row ${on?'on':''} ${!legActive?'inactive':''}" onclick="toggleViaWp('${f.id}')">
+      <div class="ferry-check">${on?'✓':'○'}</div>
+      <div class="ferry-info">
+        <div class="ferry-name">⛴ ${f.name}</div>
+        <div class="ferry-meta">${legId?`<span class="ferry-leg">${legId}</span>`:''}${f.country}${shortNote?' · '+shortNote:''}</div>
+        ${warnTag?`<div class="ferry-warn">⚠ ${warnTag.l}</div>`:''}
+      </div>
+    </div>`;
   }).join('');
 }
 
