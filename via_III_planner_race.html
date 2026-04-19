@@ -220,7 +220,9 @@
     display: none;
   }
   .compliance-panel.minimized {
-    flex: 0;
+    flex: none;
+    height: 44px;
+    min-height: 0;
     overflow: hidden;
   }
   .compliance-panel.minimized .compliance-body { display: none; }
@@ -1810,7 +1812,13 @@ async function previewRoute() {
   document.getElementById('routingOverlay').classList.add('active');
   routeLayerGroup && routeLayerGroup.clearLayers();
   savedRouteSegments = [];
-  document.getElementById('compliancePanel').style.display = 'none';
+  // Minimise the compliance panel (don't fully hide — keep header accessible)
+  const _cp = document.getElementById('compliancePanel');
+  if (_cp.style.display !== 'none') {
+    _cp.classList.add('minimized');
+    const _btn = _cp.querySelector('.compliance-toggle');
+    if (_btn) _btn.textContent = '▲';
+  }
   document.getElementById('mapAreaWrap').className = 'map-area full';
   setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
 
@@ -2282,7 +2290,10 @@ function selectWp(i) {
 
   // Only collapse compliance panel if an inspected RWGPS route is active
   if (selRoute) {
-    document.getElementById('compliancePanel').style.display = 'none';
+    const _cp2 = document.getElementById('compliancePanel');
+    _cp2.classList.add('minimized');
+    const _btn2 = _cp2.querySelector('.compliance-toggle');
+    if (_btn2) _btn2.textContent = '▲';
     document.getElementById('mapAreaWrap').className = 'map-area full';
   }
   setTimeout(() => leafletMap && leafletMap.invalidateSize(), 50);
