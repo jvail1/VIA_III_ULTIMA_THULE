@@ -835,6 +835,11 @@ const BANNED = [
   {name:'Gudvangen–Undredal ferry (BANNED)',lat:60.8930, lng:6.8604,  r:400, type:'ferry', note:'Banned. Use overground roads.'},
   {name:'Kaupanger ferry (BANNED)',         lat:61.1787, lng:7.2529,  r:400, type:'ferry', note:'Banned. Use Solvorn–Ornes (permitted) for Urnes church instead.'},
   {name:'Bergen fast boat (BANNED)',        lat:60.3960, lng:5.3203,  r:400, type:'ferry', note:'Bergen fast boat port is banned.'},
+  {name:'Stavanger–Bergen ferry (BANNED)',  lat:58.9215, lng:5.5831,  r:400, type:'ferry', note:'Banned. Long fjord boat service.'},
+  {name:'Grenaa–Halmstad ferry (BANNED)',   lat:56.5901, lng:11.6884, r:400, type:'ferry', note:'Banned. DK→SE direct ferry. Use Helsingør–Helsingborg instead.'},
+  {name:'Brake–Sandstedt ferry (BANNED)',   lat:53.3623, lng:8.4986,  r:400, type:'ferry', note:'Banned. Weser crossing near Bremerhaven.'},
+  {name:'Lemwerder–Vegesack ferry (BANNED)',lat:53.1679, lng:8.6197,  r:400, type:'ferry', note:'Banned. Weser crossing near Bremen.'},
+  {name:'Motzen–Blumenthal ferry (BANNED)', lat:53.1815, lng:8.5590,  r:400, type:'ferry', note:'Banned. Weser crossing near Bremen.'},
   {name:'Travemünde ferries (BANNED)',      lat:53.9666, lng:10.9025, r:400, type:'ferry', note:'All Travemünde ferries are banned.'},
   {name:'Strömstad–Sandefjord (BANNED)',    lat:58.9611, lng:11.0426, r:400, type:'ferry', note:'Banned. Use Svinesund bridge cycle path instead.'},
   {name:'Öresundsbron bridge (BANNED)',     lat:55.5834, lng:12.7921, r:400, type:'ferry', note:'The Øresund Bridge is banned for cyclists. Use Helsingør–Helsingborg ferry instead.'},
@@ -869,7 +874,17 @@ const GATES = [
 const WPS = [
   {id:'start', type:'start', seq:'S', name:'De Proloog, Amerongen', lat:52.00384, lng:5.46146, country:'NL', note:'Race starts 07:00 on 24 July 2026. Sign-on 23 July 09:00–17:00.', tags:[]},
   {id:'g1', type:'gate', seq:'I', name:'Gate I — Brocken (1,141m)', lat:51.79895, lng:10.61544, country:'DE', note:'Approach from Wernigerode via B244. Avoid Brockenbahn rail road.', tags:[]},
+  // ── Elbe crossings (L1, Germany) ──────────────────────────────
+  {id:'f_wisch', type:'ferry', seq:'⛴', name:'Wischhafen–Glückstadt Ferry', lat:53.7906, lng:9.3703, country:'DE', note:'Permitted ✅. Elbe crossing west of Hamburg. Avoids city centre.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_teuf',  type:'ferry', seq:'⛴', name:'Schiffsanleger-Teufelsbruck Ferry', lat:53.5461, lng:9.8519, country:'DE', note:'Permitted ✅. Elbe crossing near Hamburg.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  // ── Denmark crossings (L2) ────────────────────────────────────
   {id:'f_putt', type:'ferry', seq:'⛴', name:'Puttgarden–Rødby Ferry', lat:54.5009, lng:11.2260, country:'DE→DK', note:'Permitted ✅. ~45 min. Walk-on.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_fyns',  type:'ferry', seq:'⛴', name:'Fynshav Ferries', lat:55.0367, lng:10.0210, country:'DK', note:'Permitted ✅. Schleswig coast → Funen island crossings.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_spod',  type:'ferry', seq:'⛴', name:'Spodsbjerg–Taars Ferry', lat:54.9176, lng:10.8925, country:'DK', note:'Permitted ✅. Langeland → Lolland. Alternative southern Danish route.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_ball',  type:'ferry', seq:'⛴', name:'Ballen–Kalundborg Ferry', lat:55.7879, lng:10.7107, country:'DK', note:'Permitted ✅. Samsø → Zealand. Part of Jutland → Zealand via Samsø route.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_hou',   type:'ferry', seq:'⛴', name:'Hou–Saelvig Ferry', lat:55.9078, lng:10.3945, country:'DK', note:'Permitted ✅. Jutland (Hou) → Samsø. Pairs with Ballen–Kalundborg.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_aard',  type:'ferry', seq:'⛴', name:'Aarhus–Yderby Ferry', lat:56.0392, lng:10.6726, country:'DK', note:'Permitted ✅. Aarhus → Samsø. Alternative Samsø crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_roer',  type:'ferry', seq:'⛴', name:'Roervig–Hundested Ferry', lat:55.9542, lng:11.8114, country:'DK', note:'Permitted ✅. Short crossing of Isefjord/Kattegat near Sjællands Odde.', tags:[{l:'PERMITTED',c:'permitted'}]},
   {id:'f_hels', type:'ferry', seq:'⛴', name:'Helsingør–Helsingborg Ferry', lat:56.0328, lng:12.6167, country:'DK→SE', note:'THE mandatory DK→SE crossing ✅. 20 min, every 20 min. All other DK→SE ferries BANNED.', tags:[{l:'PERMITTED',c:'permitted'},{l:'ONLY VALID DK→SE',c:'warning'}]},
   {id:'g2', type:'gate', seq:'II', name:'Gate II — Fredriksten Fortress', lat:59.11994, lng:11.39534, country:'NO', note:'Open 24 hours. Avoid fast E18.', tags:[]},
   {id:'moss_ferry', type:'ferry', seq:'⛴', name:'Moss–Horten Ferry',
@@ -892,8 +907,31 @@ const WPS = [
   {id:'g12', type:'gate', seq:'XII', name:'Gate XII — Svøufallet', lat:62.50932, lng:9.06695, country:'NO', note:'East detour on Rv70 toward Sunndalsøra — flat valley road.', tags:[]},
   {id:'g15', type:'gate', seq:'XV', name:'Gate XV — Atlantic Ocean Road', lat:63.0098, lng:7.43054, country:'NO', note:'Flat causeway. Use Molde–Vestnes ferry (permitted ✅).', tags:[{l:'FLAT & FAST',c:'permitted'}]},
   {id:'g16', type:'gate', seq:'XVI', name:'Gate XVI — Vestkapp (310m)', lat:62.18652, lng:5.12587, country:'NO', note:'Final gate. Use Lote–Anda ferry after.', tags:[], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/vestkapp.jpeg'},
+  // ── Hardangerfjord crossings (L3/L5 region) ──────────────────
+  {id:'f_utak',  type:'ferry', seq:'⛴', name:'Utaker–Skånevik Ferry', lat:59.7708, lng:5.9138, country:'NO', note:'Permitted ✅. Sunnhordland crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_skaa',  type:'ferry', seq:'⛴', name:'Skånevik–Matre Ferry', lat:59.7726, lng:5.9294, country:'NO', note:'Permitted ✅. Sunnhordland crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_gjer',  type:'ferry', seq:'⛴', name:'Gjermundshamn–Årsnes Ferry', lat:60.0618, lng:5.9679, country:'NO', note:'Permitted ✅. Hardangerfjord south arm crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_torv',  type:'ferry', seq:'⛴', name:'Tørvikbygd–Jondal Ferry', lat:60.2899, lng:6.2071, country:'NO', note:'Permitted ✅. Hardangerfjord crossing near Jondal.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_kins',  type:'ferry', seq:'⛴', name:'Kinsarvik–Utne Ferry', lat:60.4013, lng:6.6840, country:'NO', note:'Permitted ✅. Upper Hardangerfjord crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_utne',  type:'ferry', seq:'⛴', name:'Utne–Kvanndal Ferry', lat:60.4440, lng:6.6171, country:'NO', note:'Permitted ✅. Upper Hardangerfjord crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  // ── Sognefjord crossings (L5/L6 region) ──────────────────────
+  {id:'f_oppe',  type:'ferry', seq:'⛴', name:'Oppedal–Lvik Ferry', lat:61.0800, lng:5.5041, country:'NO', note:'Permitted ✅. Outer Sognefjord crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_vang',  type:'ferry', seq:'⛴', name:'Vangsnes–Dragsvik Ferry', lat:61.1934, lng:6.6049, country:'NO', note:'Permitted ✅. Inner Sognefjord crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_hell',  type:'ferry', seq:'⛴', name:'Hella–Vangsnes Ferry', lat:61.1954, lng:6.6118, country:'NO', note:'Permitted ✅. Inner Sognefjord / Balestrand crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_drag',  type:'ferry', seq:'⛴', name:'Dragsvik–Hella Ferry', lat:61.2112, lng:6.5813, country:'NO', note:'Permitted ✅. Inner Sognefjord crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  // ── Linge-Eidsdal / Trollstigen area (L7) ────────────────────
+  {id:'f_ling',  type:'ferry', seq:'⛴', name:'Linge–Eidsdal Ferry', lat:62.2748, lng:7.1730, country:'NO', note:'Permitted ✅. After Trollstigen. Crosses Norddalsfjord.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_stra',  type:'ferry', seq:'⛴', name:'Stranda–Liabygda Ferry', lat:62.3094, lng:6.9742, country:'NO', note:'Permitted ✅. Storfjord crossing alternative near Geiranger/Trollstigen.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_sykk',  type:'ferry', seq:'⛴', name:'Sykkelven–Magerholm Ferry', lat:62.4206, lng:6.5223, country:'NO', note:'Permitted ✅. Ørstafjord crossing near Ålesund.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_hjor',  type:'ferry', seq:'⛴', name:'Hjørundfjord Ferries', lat:62.2382, lng:6.4924, country:'NO', note:'Permitted ✅. Hjørundfjord crossings near Ørsta/Volda area.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  // ── Molde–Vestnes (L8, after Gate XV) ────────────────────────
+  {id:'f_mold',  type:'ferry', seq:'⛴', name:'Molde–Vestnes Ferry', lat:62.6971, lng:7.0969, country:'NO', note:'Permitted ✅. Crosses Romsdalsfjord after Gate XV Atlantic Ocean Road.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  // ── Volda finish chain (L9) ───────────────────────────────────
+  {id:'f_isan',  type:'ferry', seq:'⛴', name:'Isane–Stårheim Ferries', lat:61.8988, lng:5.7218, country:'NO', note:'Permitted ✅. Nordfjord area crossings on approach to Volda.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_olde',  type:'ferry', seq:'⛴', name:'Oldeide Ferries', lat:61.8821, lng:5.0822, country:'NO', note:'Permitted ✅. Nordfjord area crossings.', tags:[{l:'PERMITTED',c:'permitted'}]},
   {id:'f_lote', type:'ferry', seq:'⛴', name:'Lote–Anda Ferry', lat:61.8544, lng:6.0813, country:'NO', note:'Permitted ✅. Avoids all banned E39+tunnels near Volda.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS BANNED E39+TUNNELS',c:'permitted'}]},
   {id:'f_fest', type:'ferry', seq:'⛴', name:'Festøya Ferry', lat:62.3749, lng:6.3315, country:'NO', note:'Permitted ✅. ~20 min crossing.', tags:[{l:'PERMITTED',c:'permitted'}]},
+  {id:'f_folk',  type:'ferry', seq:'⛴', name:'Folkestad–Volda Ferry', lat:62.1325, lng:6.0459, country:'NO', note:'Permitted ✅. Alternative final approach into Volda.', tags:[{l:'PERMITTED',c:'permitted'}]},
   {id:'f_lauv', type:'ferry', seq:'⛴', name:'Lauvstad–Volda Ferry', lat:62.1646, lng:5.9425, country:'NO', note:'Permitted ✅. Final ferry into Volda.', tags:[{l:'PERMITTED',c:'permitted'}]},
   {id:'finish', type:'finish', seq:'F', name:'FINISH — Volda', lat:62.17109, lng:6.00881, country:'NO', note:'Race finish. Triumphal Celebration 8 August 2026 at 20:00.', tags:[], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/volda-finish.jpeg'},
 ];
