@@ -810,6 +810,8 @@ function applyLang() {
   if (addPinBtn && !addPinBtn.classList.contains('active')) addPinBtn.innerHTML = tr('btn_add_pin');
   const refreshBtn = document.getElementById('poiRefreshBtn');
   if (refreshBtn) refreshBtn.textContent = tr('btn_refresh_poi');
+  const readmeModal = document.getElementById('readmeModal');
+  if (readmeModal && readmeModal.classList.contains('open')) openReadme();
 }
 
 let API_KEY = '';
