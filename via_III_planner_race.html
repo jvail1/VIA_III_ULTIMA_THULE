@@ -652,7 +652,7 @@
           <button id="kmlToggleBtn" onclick="toggleOfficialMap()" data-i18n="btn_official_map">🗺 Official Map</button>
           <button id="poiBtn" onclick="togglePOI()">⛺ Camps · 💧 Water · 🚽 Toilets · 🚲 Bikes</button>
           <div id="poiSecondaryPanel" style="position:absolute;top:86px;right:10px;z-index:470;display:none;flex-direction:column;align-items:flex-end;gap:4px;">
-            <div id="poiFilterBar" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <div id="poiFilterBar" style="display:flex;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:280px;">
               <button class="poi-filter-chip on" data-type="camp"   onclick="togglePOIType('camp')">⛺ Camps</button>
               <button class="poi-filter-chip on" data-type="water"  onclick="togglePOIType('water')">💧 Water</button>
               <button class="poi-filter-chip on" data-type="toilet" onclick="togglePOIType('toilet')">🚽 Toilets</button>
