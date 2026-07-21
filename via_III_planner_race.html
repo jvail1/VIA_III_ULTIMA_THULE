@@ -618,7 +618,7 @@
       <div class="stats-row">
         <div class="stat-item"><span class="stat-val" id="statTotal">~4,000</span><span class="stat-lbl" data-i18n="stat_km">km total</span></div>
         <div class="stat-item"><span class="stat-val">~40k</span><span class="stat-lbl" data-i18n="stat_climbing">m climbing</span></div>
-        <div class="stat-item"><span class="stat-val">16</span><span class="stat-lbl" data-i18n="stat_gates">gates</span></div>
+        <div class="stat-item"><span class="stat-val">17</span><span class="stat-lbl" data-i18n="stat_gates">gates</span></div>
         <div class="stat-item"><span class="stat-val">17</span><span class="stat-lbl" data-i18n="stat_banned">banned tunnels</span></div>
         <div class="stat-item"><span class="stat-val">8+</span><span class="stat-lbl" data-i18n="stat_ferries">key ferries</span></div>
       </div>
@@ -646,7 +646,7 @@
             <h3>Route Compliance Inspector</h3>
             <p>Select any route from <strong>My Routes</strong> to embed the interactive RideWithGPS map and run a full compliance check against:<br><br>
             ⛔ 15 banned tunnels &nbsp;·&nbsp; 5 banned road sections &nbsp;·&nbsp; 20+ banned ferries<br><br>
-            ✅ 16 mandatory gate proximity checks</p>
+            ✅ 17 mandatory gate proximity checks</p>
           </div>
           <div id="map" style="width:100%;height:100%"></div>
           <button id="kmlToggleBtn" onclick="toggleOfficialMap()" data-i18n="btn_official_map">🗺 Official Map</button>
@@ -906,6 +906,7 @@ const GATES = [
   {id:'g15',    name:'Gate XV — Atlantic Road',   lat:63.0098,  lng:7.43054,  r:500},
   {id:'g16',    name:'Gate XVI — Vestkapp',       lat:62.18652, lng:5.12587,  r:500},
   {id:'finish', name:'Finish — Volda',            lat:62.17109, lng:6.00881,  r:500},
+  {id:'refuge', name:'Refuge — Botn Fjellstue',  lat:59.76959, lng:7.40995,  r:500},
 ];
 
 // ── WAYPOINTS (for sidebar) ───────────────────────────────────
@@ -929,7 +930,7 @@ const WPS = [
    lat:59.4356, lng:10.6573, country:'NO',
    note:'Permitted ✅. Crosses the Oslofjord. Avoids the banned Oslofjordtunnelen. Walk-on.', tags:[{l:'PERMITTED',c:'permitted'},{l:'AVOIDS OSLOFJORDTUNNELEN',c:'permitted'}]},
   {id:'g3', type:'gate', seq:'III', name:'Gate III — Suleskard (1,050m)', lat:59.04283, lng:7.14565, country:'NO', note:'Approach from east on Rv9/Fv468 — paved.', tags:[], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/suleskard.jpeg'},
-  {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge (TBC — Sirdal corridor)', lat:59.06, lng:6.90, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/fjord-sauna.jpeg'},
+  {id:'refuge', type:'refuge', seq:'🏕', name:'Refuge — Botn Fjellstue', lat:59.76959, lng:7.40995, country:'NO', note:'Mandatory 15-min stop. Max 36hr stay. Free food/water/showers/charging.', tags:[{l:'MANDATORY STOP',c:'warning'}], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/fjord-sauna.jpeg'},
   {id:'g4', type:'gate', seq:'IV', name:'Gate IV — Lysebotn', lat:59.05483, lng:6.64508, country:'NO', note:'BOOK FERRY AHEAD: Lysebotn–Forsand. billetter.kolumbus.no', tags:[{l:'BOOK FERRY AHEAD',c:'warning'}], photo:'https://raw.githubusercontent.com/jvail1/VIA_III_ULTIMA_THULE/main/assets/gate-photos/lysebotn.jpeg'},
   {id:'f_lyse', type:'ferry', seq:'⛴', name:'Lysebotn–Forsand Ferry', lat:59.0547, lng:6.6452, country:'NO', note:'Permitted ✅ — BOOK IN ADVANCE. Sells out in summer.', tags:[{l:'PERMITTED',c:'permitted'},{l:'BOOK IN ADVANCE',c:'warning'}]},
   {id:'g5', type:'gate', seq:'V', name:'Gate V — Vøringsfossen', lat:60.42783, lng:7.2533, country:'NO', note:'Right beside Rv7 — minimal detour.', tags:[]},
