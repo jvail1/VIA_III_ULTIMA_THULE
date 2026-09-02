@@ -319,7 +319,10 @@ visit_order_df   = build_gate_visit_order(raw, gates)
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    if Path("icon-192.png").exists():
+    hero = Path("assets/gate-photos/via-race.png")
+    if hero.exists():
+        st.image(str(hero), use_container_width=True)
+    elif Path("icon-192.png").exists():
         st.image("icon-192.png", width=72)
     st.title("VIA Race III")
     st.caption("Ultima Thule · NL → NO · ~4,000 km")
