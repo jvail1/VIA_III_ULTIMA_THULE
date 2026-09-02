@@ -1,3 +1,4 @@
+
 # VIA Race III — Ultima Thule: Project Context
 
 ## Project overview
@@ -17,6 +18,7 @@ Norway (~4,000 km). Data exported 2026-09-02.
 | `VIA Chapter III - RACE Route & Locations.kml` | Race route KML — 19 mandatory gates, banned roads/tunnels/ferries |
 | `via_race_dashboard.py` | Streamlit dashboard (see below) |
 | `via_race_26_leaderboard.png` | Official 32-finisher leaderboard PNG |
+| `via_race_26_segments.png` | Segment strip chart PNG export |
 | `.streamlit/config.toml` | Dark theme config for the dashboard |
 
 ---
@@ -163,12 +165,18 @@ To add another override, append to `OFFICIAL_FINISHER_OVERRIDES` in the dashboar
 
 | Tab | Contents |
 |-----|----------|
-| 🏆 Leaderboard | Stacked bar (riding vs rest), sorted by elapsed race time, hover for full metrics |
+| 🏆 Leaderboard | Stacked bar (riding vs rest), sorted by elapsed race time, hover for full metrics. Always shows finishers only — unaffected by status filter. |
 | 🚴 Rider Profile | KPI cards, speed + elevation time-series (clipped to race window), gate compliance table |
-| ✅ Gate Compliance | Heatmap matrix — all Race riders × 19 gates |
-| 🗺️ Route Map | GPS tracks (up to 10 riders) + mandatory gate markers, `open-street-map` tiles |
+| ✅ Gate Compliance | Heatmap matrix — all Race riders × 19 gates. Respects status filter. |
+| 🗺️ Route Map | GPS tracks (up to 10 riders) + mandatory gate markers, `open-street-map` tiles. Rider list respects status filter. |
+| 📋 Gate Order | Per-rider gate sequence table with leg times and type badges (🔵 Ordered / 🟡 Refuge / ⚪ Free), consensus route table, stop × gate popularity heatmap, all-finisher visit order comparison heatmap. Always finishers only. |
+| ⚡ Segments | Gate-to-gate speed analysis (11 common legs shared by ≥20 finishers). Strip chart + leg summary table. Always finishers only. |
 
-**Sidebar controls:** status filter, rider selector (drives Profile + Map default), summary counts.
+**Sidebar controls:**
+- Status filter — with `help=` tooltip explaining which tabs it affects (Gate Compliance + Route Map only; Leaderboard/Segments/Gate Order are always finishers-only)
+- Rider selector — respects the status filter (draws list from filtered pool); falls back to Adam Bialek → Jason Vail → first available. Drives Rider Profile, Gate Order per-rider view, and Route Map default. Also has `help=` tooltip.
+- Summary KPI counts (total / finishers / DNF / DNS)
+- via-race.png hero image (from assets/gate-photos/)
 
 **Known gotcha:** The Route Map multiselect uses `key="map_riders_select"` with session-state
 pre-cleaning to avoid `StreamlitDefaultNotInOptionsError` when the status filter changes.
@@ -187,3 +195,15 @@ pre-cleaning to avoid `StreamlitDefaultNotInOptionsError` when the status filter
 | Race DNS | 5 |
 
 Race started: **2026-07-24 ~05:30 UTC** at De Proloog, Amerongen (NL)
+
+---
+
+## Sharing / deployment
+
+The dashboard has not yet been deployed publicly. Options discussed:
+
+- **ngrok tunnel** — quickest for a temporary share; no data upload required
+- **Streamlit Community Cloud** — free, deploys from GitHub, shareable URL. Requires the 63 MB JSON to be committed to the repo (it's under GitHub's 100 MB limit). Use the **email allowlist** feature (free tier) for privacy — viewers must sign in with a matching Google or GitHub account.
+- **Posit Connect Cloud** — full auth, no need to commit data file; use the `connect-cloud-deploy` skill.
+
+**Privacy note:** The export contains full GPS tracks + full names for 104 real people (European riders — GDPR applies). Consider limiting public exposure to finisher data only, or using viewer authentication before sharing broadly.
