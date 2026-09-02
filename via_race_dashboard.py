@@ -142,9 +142,24 @@ def build_race_df(_raw, _gates):
         }
         gates_hit = sum(1 for d in gate_dists.values() if d <= RADIUS_M)
 
-        # Race window from start → finish gate
-        t_start  = first_gate_hit(lats, lons, ts, start_g["lat"], start_g["lon"])
-        t_finish = first_gate_hit(lats, lons, ts, finish_g["lat"], finish_g["lon"])
+        # Race window: start = first hit of start gate
+        # finish = first hit of Volda AFTER all other 18 gates have been visited
+        # (prevents early Volda pass-throughs from being counted as the finish)
+        t_start = first_gate_hit(lats, lons, ts, start_g["lat"], start_g["lon"])
+
+        other_gates = _gates[_gates["gate"] != "Volda"]
+        last_other = None
+        for _, og in other_gates.iterrows():
+            t_og = first_gate_hit(lats, lons, ts, og["lat"], og["lon"])
+            if t_og is not None and (last_other is None or t_og > last_other):
+                last_other = t_og
+
+        if last_other is not None:
+            after_mask = ts >= last_other
+            lats_a, lons_a, ts_a = lats[after_mask], lons[after_mask], ts[after_mask]
+            t_finish = first_gate_hit(lats_a, lons_a, ts_a, finish_g["lat"], finish_g["lon"])
+        else:
+            t_finish = None
 
         # Distance & elevation (full track)
         total_dist = round(pts[-1]["odo"] - pts[0]["odo"], 1)
