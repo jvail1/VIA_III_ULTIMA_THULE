@@ -5,6 +5,7 @@ Streamlit app for exploring race GPS data, gate compliance, and rider profiles.
 
 import json
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -84,6 +85,10 @@ def compute_elev_gain(pts, valid_range=(-100, 2500), step_threshold=5):
 
 @st.cache_data
 def load_raw():
+    if not Path(DATA_PATH).exists():
+        zip_path = DATA_PATH.replace(".json", ".zip")
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(".")
     with open(DATA_PATH) as f:
         return json.load(f)
 
@@ -486,13 +491,14 @@ filtered_df = race_df[race_df["status"].isin(status_filter)]
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🏆 Leaderboard",
     "🚴 Rider Profile",
     "✅ Gate Compliance",
     "🗺️ Route Map",
     "📋 Gate Order",
     "⚡ Segments",
+    "📐 Route Efficiency",
 ])
 
 # ── TAB 1: Leaderboard ────────────────────────────────────────────────────────
@@ -1051,3 +1057,113 @@ with tab6:
     ]
     tbl["Median (km/h)"] = tbl["Median (km/h)"].round(1)
     st.dataframe(tbl, hide_index=True, use_container_width=True)
+
+# ── TAB 7: Route Efficiency ───────────────────────────────────────────────────
+
+with tab7:
+    st.subheader("Route Efficiency — Distance vs. Finish Time")
+    st.caption(
+        "Each dot is a Race finisher. X = total km ridden · Y = elapsed race time. "
+        "Bottom-left = fastest AND shortest. Colour = finish rank."
+    )
+
+    eff_df = (
+        race_df[race_df["status"] == "FINISHED"]
+        .dropna(subset=["total_dist_km", "total_days"])
+        .copy()
+    )
+    eff_df["elapsed_hrs"] = eff_df["total_days"] * 24
+    eff_df = eff_df.sort_values("elapsed_hrs").reset_index(drop=True)
+    eff_df["rank"] = range(1, len(eff_df) + 1)
+
+    # Efficiency score: average of distance rank and time rank (lower = more efficient)
+    eff_df["dist_rank"] = eff_df["total_dist_km"].rank().astype(int)
+    eff_df["time_rank"] = eff_df["elapsed_hrs"].rank().astype(int)
+    eff_df["efficiency_score"] = ((eff_df["dist_rank"] + eff_df["time_rank"]) / 2).round(1)
+
+    # Reference lines: median distance and median time
+    med_dist = eff_df["total_dist_km"].median()
+    med_time = eff_df["elapsed_hrs"].median()
+
+    fig_eff = go.Figure()
+
+    # Quadrant shading
+    x_max = eff_df["total_dist_km"].max() * 1.02
+    y_max = eff_df["elapsed_hrs"].max() * 1.05
+    x_min = eff_df["total_dist_km"].min() * 0.98
+    y_min = eff_df["elapsed_hrs"].min() * 0.97
+
+    fig_eff.add_shape(type="rect", x0=x_min, x1=med_dist, y0=y_min, y1=med_time,
+        fillcolor="rgba(46,204,113,0.07)", line_width=0, layer="below")
+    fig_eff.add_shape(type="rect", x0=med_dist, x1=x_max, y0=med_time, y1=y_max,
+        fillcolor="rgba(231,76,60,0.07)", line_width=0, layer="below")
+
+    fig_eff.add_shape(type="line", x0=med_dist, x1=med_dist, y0=y_min, y1=y_max,
+        line=dict(color="rgba(255,255,255,0.25)", dash="dot", width=1))
+    fig_eff.add_shape(type="line", x0=x_min, x1=x_max, y0=med_time, y1=med_time,
+        line=dict(color="rgba(255,255,255,0.25)", dash="dot", width=1))
+
+    fig_eff.add_annotation(x=x_min + 10, y=y_min + 1, text="Short & Fast",
+        showarrow=False, font=dict(color="rgba(46,204,113,0.7)", size=11), xanchor="left")
+    fig_eff.add_annotation(x=x_max - 10, y=y_max - 1, text="Long & Slow",
+        showarrow=False, font=dict(color="rgba(231,76,60,0.7)", size=11), xanchor="right")
+
+    fig_eff.add_trace(go.Scatter(
+        x=eff_df["total_dist_km"],
+        y=eff_df["elapsed_hrs"],
+        mode="markers+text",
+        text=eff_df["name"].apply(lambda n: n.split()[-1]),
+        textposition="top center",
+        textfont=dict(size=9, color="rgba(200,200,200,0.8)"),
+        marker=dict(
+            color=eff_df["rank"],
+            colorscale="RdYlGn_r",
+            size=12,
+            colorbar=dict(title="Finish Rank", thickness=14, len=0.7),
+            line=dict(width=1, color="rgba(255,255,255,0.3)"),
+        ),
+        customdata=eff_df[[
+            "name", "rank", "total_dist_km", "elapsed_hrs",
+            "ride_time_hrs", "avg_speed_kmh", "elev_gain_m",
+            "dist_rank", "time_rank", "efficiency_score",
+        ]].values,
+        hovertemplate=(
+            "<b>%{customdata[0]}</b><br>"
+            "Finish rank: #%{customdata[1]}<br>"
+            "Distance: %{customdata[2]:,.0f} km (ranked #%{customdata[7]} shortest)<br>"
+            "Elapsed: %{customdata[3]:.1f} hrs (ranked #%{customdata[8]} fastest)<br>"
+            "Ride time: %{customdata[4]:.1f} hrs<br>"
+            "Avg speed: %{customdata[5]:.1f} km/h<br>"
+            "Elev gain: %{customdata[6]:,.0f} m<br>"
+            "Efficiency score: %{customdata[9]} (lower = better)"
+            "<extra></extra>"
+        ),
+        showlegend=False,
+    ))
+
+    fig_eff.update_layout(
+        xaxis=dict(title="Total Distance Ridden (km)", tickformat=","),
+        yaxis=dict(title="Elapsed Race Time (hrs)"),
+        height=580,
+        template="plotly_dark",
+        margin=dict(l=60, r=80, t=20, b=60),
+    )
+    st.plotly_chart(fig_eff, use_container_width=True)
+
+    # ── Efficiency ranking table ──────────────────────────────────────────────
+    st.subheader("Efficiency Ranking")
+    st.caption("Efficiency score = average of distance rank and time rank. Score of 1 = perfectly short and fast.")
+
+    tbl_eff = eff_df[[
+        "rank", "name", "total_dist_km", "elapsed_hrs",
+        "avg_speed_kmh", "elev_gain_m", "dist_rank", "time_rank", "efficiency_score",
+    ]].copy()
+    tbl_eff.columns = [
+        "Finish Rank", "Rider", "Distance (km)", "Elapsed (hrs)",
+        "Avg Speed (km/h)", "Elev Gain (m)", "Distance Rank", "Time Rank", "Efficiency Score",
+    ]
+    tbl_eff["Distance (km)"] = tbl_eff["Distance (km)"].map("{:,.0f}".format)
+    tbl_eff["Elapsed (hrs)"] = tbl_eff["Elapsed (hrs)"].round(1)
+    tbl_eff["Elev Gain (m)"] = tbl_eff["Elev Gain (m)"].map("{:,.0f}".format)
+    tbl_eff = tbl_eff.sort_values("Efficiency Score")
+    st.dataframe(tbl_eff, hide_index=True, use_container_width=True)

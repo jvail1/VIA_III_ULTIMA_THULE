@@ -3,8 +3,7 @@ VIA_ROUTE_INSPECTOR/
 upload_gate_photos.py
 via_III_planner.html
 
-# Race data export (large file, not versioned)
-via_race_26_export.zip
+# Race data export — zip committed, JSON extracted at runtime (60 MB, too large for git)
 via_race_26_export.json
 
 # Generated map artefacts
