@@ -176,7 +176,7 @@ def build_race_df(_raw, _gates):
             "total_dist_km": total_dist,
             "elev_gain_m":   elev_gain,
             "avg_speed_kmh": avg_speed,
-            "total_days":    round(total_days, 2) if total_days else None,
+            "total_days":    round(total_days, 6) if total_days else None,
             "ride_time_hrs": round(ride_hrs, 1) if ride_hrs else None,
             "race_start":    t_start,
             "race_finish":   t_finish,
