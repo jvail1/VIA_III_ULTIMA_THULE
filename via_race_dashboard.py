@@ -198,6 +198,28 @@ def build_race_df(_raw, _gates):
     return df, gate_list
 
 
+GATE_SHORT = {
+    "De Proloog, Amerongen": "Start",
+    "Brocken":               "Brocken",
+    "Fredriksten fortress":  "Fredriksten",
+    "Botn Fjellstue":        "Botn",
+    "Suleskard":             "Suleskard",
+    "Lysebotn":              "Lysebotn",
+    "Vøringfossen":          "Vøringfossen",
+    "Sognefjellet":          "Sognefjellet",
+    "Gaularfjellet":         "Gaularfjellet",
+    "Strynefjellsveg":       "Strynefjell",
+    "Borgund Stavkyrkje":    "Borgund",
+    "Urnes stavkyrkje":      "Urnes",
+    "Lom Stavkyrkje":        "Lom",
+    "Svøufallet":            "Svøufallet",
+    "Atlantic road":         "Atlantic Rd",
+    "Trollstigen":           "Trollstigen",
+    "Dalsnibba":             "Dalsnibba",
+    "Vestkapp":              "Vestkapp",
+    "Volda":                 "Volda",
+}
+
 ORDERED_GATES = [
     "De Proloog, Amerongen",
     "Brocken",
@@ -298,6 +320,86 @@ def build_gate_popularity(_visit_df, finisher_names, all_gate_cols, short_map):
 
 
 @st.cache_data
+def build_segments(_raw, _visit_df, _gates, finisher_names, radius=RADIUS_M):
+    """Gate-to-gate elapsed time and avg moving speed for each finisher."""
+    seg_rows = []
+    for rname in finisher_names:
+        rider_raw = next(
+            r for r in _raw["participants"]
+            if f"{r['first_name']} {r['last_name']}" == rname
+        )
+        pts     = rider_raw["points"]
+        ts_all  = pd.to_datetime([p["ts"] for p in pts])
+        spd_all = np.array([p["speed"] for p in pts])
+
+        visits = (
+            _visit_df[_visit_df["name"] == rname]
+            .sort_values("visit_order")
+            .reset_index(drop=True)
+        )
+        for i in range(len(visits) - 1):
+            t_from  = visits.loc[i,   "visited_at"]
+            t_to    = visits.loc[i+1, "visited_at"]
+            g_from  = visits.loc[i,   "gate"]
+            g_to    = visits.loc[i+1, "gate"]
+            elapsed = (t_to - t_from).total_seconds() / 3600
+            in_seg  = (ts_all >= t_from) & (ts_all <= t_to)
+            moving  = spd_all[in_seg]
+            moving  = moving[moving > 2]
+            avg_spd = round(float(moving.mean()), 1) if len(moving) > 0 else None
+            seg_rows.append({
+                "rider":         rname,
+                "from_gate":     g_from,
+                "to_gate":       g_to,
+                "elapsed_hrs":   round(elapsed, 2),
+                "avg_speed_kmh": avg_spd,
+            })
+
+    df = pd.DataFrame(seg_rows)
+    df["leg"] = df["from_gate"].map(lambda g: GATE_SHORT.get(g, g)) + \
+                " → " + \
+                df["to_gate"].map(lambda g: GATE_SHORT.get(g, g))
+
+    # Keep only legs shared by ≥20 finishers
+    counts = df.groupby(["from_gate", "to_gate"]).size().reset_index(name="n")
+    common = counts[counts["n"] >= 20]
+    common_keys = set(zip(common["from_gate"], common["to_gate"]))
+    df = df[df.apply(lambda r: (r["from_gate"], r["to_gate"]) in common_keys, axis=1)].copy()
+
+    # Per-leg summary
+    stats = (df.groupby("leg").agg(
+        n_riders     =("rider",         "count"),
+        median_speed =("avg_speed_kmh", "median"),
+        min_speed    =("avg_speed_kmh", "min"),
+        max_speed    =("avg_speed_kmh", "max"),
+        median_hrs   =("elapsed_hrs",   "median"),
+    ).reset_index())
+
+    fastest = (df.dropna(subset=["avg_speed_kmh"])
+               .sort_values("avg_speed_kmh", ascending=False)
+               .groupby("leg", as_index=False).first()
+               [["leg","rider","avg_speed_kmh","elapsed_hrs"]]
+               .rename(columns={"rider":"fast_rider","avg_speed_kmh":"fast_kmh","elapsed_hrs":"fast_hrs"}))
+    slowest = (df.dropna(subset=["avg_speed_kmh"])
+               .sort_values("avg_speed_kmh")
+               .groupby("leg", as_index=False).first()
+               [["leg","rider","avg_speed_kmh","elapsed_hrs"]]
+               .rename(columns={"rider":"slow_rider","avg_speed_kmh":"slow_kmh","elapsed_hrs":"slow_hrs"}))
+
+    summary = stats.merge(fastest, on="leg").merge(slowest, on="leg")
+
+    # Order legs by median visit position of the from_gate
+    gate_pos = (_visit_df[_visit_df["name"].isin(finisher_names)]
+                .groupby("gate")["visit_order"].median())
+    summary["_sort"] = summary["leg"].apply(
+        lambda l: gate_pos.get(l.split(" → ")[0], 99)
+    )
+    summary = summary.sort_values("_sort").drop(columns="_sort").reset_index(drop=True)
+
+    return df, summary
+
+
+@st.cache_data
 def get_rider_track(_raw, rider_name):
     for r in _raw["participants"]:
         if f"{r['first_name']} {r['last_name']}" == rider_name:
@@ -311,10 +413,10 @@ def get_rider_track(_raw, rider_name):
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 
-raw              = load_raw()
-gates            = load_gates()
+raw                = load_raw()
+gates              = load_gates()
 race_df, gate_cols = build_race_df(raw, gates)
-visit_order_df   = build_gate_visit_order(raw, gates)
+visit_order_df     = build_gate_visit_order(raw, gates)
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -349,12 +451,13 @@ filtered_df = race_df[race_df["status"].isin(status_filter)]
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🏆 Leaderboard",
     "🚴 Rider Profile",
     "✅ Gate Compliance",
     "🗺️ Route Map",
     "📋 Gate Order",
+    "⚡ Segments",
 ])
 
 # ── TAB 1: Leaderboard ────────────────────────────────────────────────────────
@@ -822,3 +925,94 @@ with tab5:
         margin=dict(l=200, t=120, b=20),
     )
     st.plotly_chart(fig_ord, use_container_width=True)
+
+# ── TAB 6: Segments ───────────────────────────────────────────────────────────
+
+with tab6:
+    st.subheader("Gate-to-Gate Segment Analysis")
+    st.caption("Avg moving speed (km/h) per leg · legs shared by ≥20 of 32 finishers · hover for rider details")
+
+    finisher_names_seg = (
+        race_df[race_df["status"] == "FINISHED"]
+        .sort_values("total_days")["name"]
+        .tolist()
+    )
+    df_segs, leg_summary = build_segments(raw, visit_order_df, gates, finisher_names_seg)
+
+    leg_order = leg_summary["leg"].tolist()
+
+    # ── Interactive strip chart ───────────────────────────────────────────────
+    fast_map = dict(zip(leg_summary["leg"], leg_summary["fast_rider"]))
+    slow_map = dict(zip(leg_summary["leg"], leg_summary["slow_rider"]))
+    med_map  = dict(zip(leg_summary["leg"], leg_summary["median_speed"]))
+
+    fig_seg = go.Figure()
+
+    for _, row in df_segs.dropna(subset=["avg_speed_kmh"]).iterrows():
+        is_fast = row["rider"] == fast_map.get(row["leg"])
+        is_slow = row["rider"] == slow_map.get(row["leg"])
+        color   = "#e74c3c" if is_fast else ("#3498db" if is_slow else "rgba(160,160,160,0.5)")
+        size    = 12 if (is_fast or is_slow) else 7
+        symbol  = "star" if is_fast else ("square" if is_slow else "circle")
+
+        fig_seg.add_trace(go.Scatter(
+            x=[row["avg_speed_kmh"]],
+            y=[row["leg"]],
+            mode="markers",
+            marker=dict(color=color, size=size, symbol=symbol,
+                        line=dict(width=1, color="rgba(255,255,255,0.2)")),
+            showlegend=False,
+            hovertemplate=(
+                f"<b>{row['rider']}</b><br>"
+                f"Leg: {row['leg']}<br>"
+                f"Avg speed: {row['avg_speed_kmh']} km/h<br>"
+                f"Elapsed: {row['elapsed_hrs']:.1f} h"
+                "<extra></extra>"
+            ),
+        ))
+
+    # Median ticks
+    for leg, med in med_map.items():
+        fig_seg.add_trace(go.Scatter(
+            x=[med], y=[leg], mode="markers",
+            marker=dict(color="#f39c12", size=14, symbol="line-ns",
+                        line=dict(width=3, color="#f39c12")),
+            showlegend=False,
+            hovertemplate=f"Median: {med:.1f} km/h<extra></extra>",
+        ))
+
+    # Legend traces
+    fig_seg.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+        marker=dict(color="#e74c3c", size=10, symbol="star"), name="Fastest on leg"))
+    fig_seg.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+        marker=dict(color="#3498db", size=10, symbol="square"), name="Slowest on leg"))
+    fig_seg.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+        marker=dict(color="#f39c12", size=12, symbol="line-ns",
+                    line=dict(width=3, color="#f39c12")), name="Median"))
+
+    fig_seg.update_layout(
+        xaxis_title="Avg Moving Speed (km/h)",
+        yaxis=dict(
+            categoryorder="array",
+            categoryarray=leg_order[::-1],
+            tickfont=dict(size=11),
+        ),
+        legend=dict(orientation="h", y=-0.12, x=0.5, xanchor="center"),
+        height=520,
+        template="plotly_dark",
+        margin=dict(l=180, r=40, t=20, b=60),
+    )
+    st.plotly_chart(fig_seg, use_container_width=True)
+
+    # ── Summary table ─────────────────────────────────────────────────────────
+    st.subheader("Leg Summary")
+    tbl = leg_summary[[
+        "leg", "n_riders", "median_speed", "min_speed", "max_speed",
+        "fast_rider", "fast_kmh", "slow_rider", "slow_kmh",
+    ]].copy()
+    tbl.columns = [
+        "Leg", "Riders", "Median (km/h)", "Min (km/h)", "Max (km/h)",
+        "Fastest Rider", "Fast (km/h)", "Slowest Rider", "Slow (km/h)",
+    ]
+    tbl["Median (km/h)"] = tbl["Median (km/h)"].round(1)
+    st.dataframe(tbl, hide_index=True, use_container_width=True)
