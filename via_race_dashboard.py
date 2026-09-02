@@ -203,6 +203,7 @@ ORDERED_GATES = [
     "Brocken",
     "Fredriksten fortress",
     "Suleskard",
+    "Lysebotn",          # gate 5 — ordered, not free
 ]
 REFUGE_GATE = "Botn Fjellstue"
 
@@ -256,6 +257,44 @@ def build_gate_visit_order(_raw, _gates, radius=RADIUS_M):
     df = df.sort_values(["name", "visited_at"])
     df["visit_order"] = df.groupby("name").cumcount() + 1
     return df
+
+
+@st.cache_data
+def build_gate_popularity(_visit_df, finisher_names, all_gate_cols, short_map):
+    """For each stop position 1-19, count how many finishers visited each gate."""
+    fin_visits = _visit_df[_visit_df["name"].isin(finisher_names)].copy()
+    n = len(finisher_names)
+
+    pop = (fin_visits
+           .groupby(["visit_order", "gate"])
+           .size()
+           .reset_index(name="count")
+           .rename(columns={"visit_order": "stop"}))
+
+    # Consensus: most common gate per stop
+    consensus = (pop.sort_values("count", ascending=False)
+                    .groupby("stop", as_index=False)
+                    .first()[["stop", "gate", "count"]]
+                    .sort_values("stop")
+                    .reset_index(drop=True))
+    consensus["pct"] = (consensus["count"] / n * 100).round(0).astype(int)
+
+    # Popularity pivot: stop × gate → rider count
+    # Order columns by mean visit position across finishers
+    col_mean_order = (fin_visits.groupby("gate")["visit_order"]
+                      .mean()
+                      .reindex(all_gate_cols)
+                      .sort_values()
+                      .index.tolist())
+
+    pop_pivot = (pop.pivot(index="stop", columns="gate", values="count")
+                    .fillna(0).astype(int)
+                    .reindex(columns=all_gate_cols, fill_value=0))
+    pop_pivot.columns = [short_map.get(c, c) for c in pop_pivot.columns]
+    col_order_short = [short_map.get(g, g) for g in col_mean_order]
+    pop_pivot = pop_pivot.reindex(columns=col_order_short, fill_value=0)
+
+    return consensus, pop_pivot, n
 
 
 @st.cache_data
@@ -649,23 +688,7 @@ with tab5:
 
     st.divider()
 
-    # ── All-finisher comparison heatmap ───────────────────────────────────────
-    st.markdown("#### All Finishers — Gate Visit Order Comparison")
-    st.caption("Numbers show the visit sequence (1 = first gate reached). Colour shows position — earlier = darker blue.")
-
-    finisher_names_ordered = (
-        race_df[race_df["status"] == "FINISHED"]
-        .sort_values("total_days")["name"]
-        .tolist()
-    )
-
-    pivot = (
-        visit_order_df[visit_order_df["name"].isin(finisher_names_ordered)]
-        .pivot(index="name", columns="gate", values="visit_order")
-        .reindex(index=finisher_names_ordered, columns=gate_cols)
-    )
-
-    # Short column labels
+    # ── Gate order popularity ─────────────────────────────────────────────────
     gate_short = {
         "De Proloog, Amerongen": "Start",
         "Brocken":               "Brocken",
@@ -687,11 +710,94 @@ with tab5:
         "Vestkapp":              "Vestkapp",
         "Volda":                 "Volda",
     }
+
+    finisher_names_ordered = (
+        race_df[race_df["status"] == "FINISHED"]
+        .sort_values("total_days")["name"]
+        .tolist()
+    )
+
+    consensus, pop_pivot, n_fin = build_gate_popularity(
+        visit_order_df, finisher_names_ordered, gate_cols, gate_short
+    )
+
+    col_left, col_right = st.columns([1, 2])
+
+    # Consensus table
+    with col_left:
+        st.markdown("#### Consensus Route")
+        st.caption("Most common gate visited at each stop across all finishers.")
+
+        def gate_type_tag(gate):
+            if gate in ORDERED_GATES:
+                return "🔵"
+            if gate == REFUGE_GATE:
+                return "🟡"
+            return "⚪"
+
+        con_rows = []
+        for _, r in consensus.iterrows():
+            con_rows.append({
+                "Stop": int(r["stop"]),
+                " ":    gate_type_tag(r["gate"]),
+                "Gate": gate_short.get(r["gate"], r["gate"]),
+                "Riders": f"{int(r['count'])}/{n_fin}",
+                "%": f"{r['pct']}%",
+            })
+        st.dataframe(
+            pd.DataFrame(con_rows),
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Stop":   st.column_config.NumberColumn(width="small"),
+                " ":      st.column_config.TextColumn(width="small"),
+                "Riders": st.column_config.TextColumn(width="small"),
+                "%":      st.column_config.TextColumn(width="small"),
+            },
+        )
+
+    # Popularity heatmap
+    with col_right:
+        st.markdown("#### Stop × Gate Popularity")
+        st.caption(
+            "How many of the 32 finishers visited each gate at each stop. "
+            "Darker = more riders. Bright diagonal = high consensus."
+        )
+        fig_pop = px.imshow(
+            pop_pivot,
+            text_auto=True,
+            color_continuous_scale="Blues",
+            range_color=[0, n_fin],
+            aspect="auto",
+            labels=dict(x="Gate", y="Stop #", color="Riders"),
+            template="plotly_dark",
+        )
+        fig_pop.update_coloraxes(showscale=False)
+        fig_pop.update_traces(
+            textfont=dict(size=8),
+            hovertemplate="Stop %{y} · %{x}<br>%{z} riders<extra></extra>",
+        )
+        fig_pop.update_layout(
+            height=560,
+            xaxis=dict(tickangle=-40, tickfont=dict(size=9), side="top"),
+            yaxis=dict(tickfont=dict(size=9), autorange="reversed"),
+            margin=dict(l=40, r=20, t=120, b=20),
+        )
+        st.plotly_chart(fig_pop, use_container_width=True)
+
+    st.divider()
+
+    # ── All-finisher visit order comparison ───────────────────────────────────
+    st.markdown("#### All Finishers — Individual Gate Visit Order")
+    st.caption("Numbers show each rider's visit sequence (1 = first gate reached). Colour = position — earlier is darker.")
+
+    pivot = (
+        visit_order_df[visit_order_df["name"].isin(finisher_names_ordered)]
+        .pivot(index="name", columns="gate", values="visit_order")
+        .reindex(index=finisher_names_ordered, columns=gate_cols)
+    )
     pivot.columns = [gate_short.get(c, c) for c in pivot.columns]
-    pivot.index   = [
-        f"#{i+1}  {n}"
-        for i, n in enumerate(finisher_names_ordered)
-    ]
+    pivot.index   = [f"#{i+1}  {n}" for i, n in enumerate(finisher_names_ordered)]
 
     fig_ord = px.imshow(
         pivot,
