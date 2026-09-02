@@ -460,7 +460,10 @@ with st.sidebar:
     # Falls back to the full list if the filter produces an empty set.
     _selector_pool = race_df[race_df["status"].isin(status_filter)] if status_filter else race_df
     rider_options  = sorted(_selector_pool["name"].tolist()) or sorted(race_df["name"].tolist())
-    _default_rider = "Jason Vail" if "Jason Vail" in rider_options else rider_options[0]
+    _default_rider = next(
+        (r for r in ("Adam Bialek", "Jason Vail") if r in rider_options),
+        rider_options[0],
+    )
     selected_rider = st.selectbox(
         "Rider (detail / map)",
         rider_options,
