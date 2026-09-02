@@ -109,6 +109,20 @@ len(pts) < 2                                →  DNS
 ```
 Filter to `variant == "Race"` for the main results table.
 
+### Gate ordering rules
+Not all gates have the same ordering constraint:
+
+| Type | Gates | Rule |
+|------|-------|------|
+| **Ordered** | De Proloog → Brocken → Fredriksten → Suleskard (gates 1, 2, 3, 5) | Must be visited in this exact sequence |
+| **Required refuge** | Botn Fjellstue (gate 4) | Must be visited, but at any point in the ride |
+| **Free-order** | All remaining 14 gates | Must be visited, any order |
+
+> **Note:** Botn Fjellstue is a refuge, not a checkpoint gate — it sits between
+> Fredriksten and Suleskard in the KML list but riders are free to visit it whenever.
+> Nearly all riders hit Suleskard before Botn, which is geographically natural and
+> completely compliant. All 32 confirmed finishers respected the correct ordering.
+
 ### Race time
 Compute `total_days` as **start gate → finish gate** using the first timestamp within
 1,000 m of each endpoint — **not** raw first/last ping (trackers run before & after racing).
