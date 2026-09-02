@@ -449,11 +449,28 @@ with st.sidebar:
         "Status filter",
         options=["FINISHED", "DNF", "DNS"],
         default=["FINISHED", "DNF"],
+        help=(
+            "Filters the ✅ Gate Compliance matrix and the 🗺️ Route Map rider list. "
+            "The 🏆 Leaderboard, ⚡ Segments, and 📋 Gate Order tabs always show "
+            "finishers only and are unaffected by this filter."
+        ),
     )
 
-    all_riders = sorted(race_df["name"].tolist())
-    default_idx = all_riders.index("Jason Vail") if "Jason Vail" in all_riders else 0
-    selected_rider = st.selectbox("Rider (detail / map)", all_riders, index=default_idx)
+    # Rider selector respects the status filter so browsing stays consistent.
+    # Falls back to the full list if the filter produces an empty set.
+    _selector_pool = race_df[race_df["status"].isin(status_filter)] if status_filter else race_df
+    rider_options  = sorted(_selector_pool["name"].tolist()) or sorted(race_df["name"].tolist())
+    _default_rider = "Jason Vail" if "Jason Vail" in rider_options else rider_options[0]
+    selected_rider = st.selectbox(
+        "Rider (detail / map)",
+        rider_options,
+        index=rider_options.index(_default_rider),
+        help=(
+            "Drives 🚴 Rider Profile, the per-rider view in 📋 Gate Order, "
+            "and the default selection in 🗺️ Route Map. "
+            "List is filtered to the statuses selected above."
+        ),
+    )
 
     st.divider()
     col_a, col_b = st.columns(2)
