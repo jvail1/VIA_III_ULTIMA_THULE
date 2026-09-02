@@ -1008,11 +1008,11 @@ with tab6:
     st.subheader("Leg Summary")
     tbl = leg_summary[[
         "leg", "n_riders", "median_speed", "min_speed", "max_speed",
-        "fast_rider", "fast_kmh", "slow_rider", "slow_kmh",
+        "fast_rider", "fast_kmh",
     ]].copy()
     tbl.columns = [
         "Leg", "Riders", "Median (km/h)", "Min (km/h)", "Max (km/h)",
-        "Fastest Rider", "Fast (km/h)", "Slowest Rider", "Slow (km/h)",
+        "Fastest Rider", "Fast (km/h)",
     ]
     tbl["Median (km/h)"] = tbl["Median (km/h)"].round(1)
     st.dataframe(tbl, hide_index=True, use_container_width=True)
