@@ -198,6 +198,66 @@ def build_race_df(_raw, _gates):
     return df, gate_list
 
 
+ORDERED_GATES = [
+    "De Proloog, Amerongen",
+    "Brocken",
+    "Fredriksten fortress",
+    "Suleskard",
+]
+REFUGE_GATE = "Botn Fjellstue"
+
+GATE_TYPE = {}  # populated after gate_cols is known
+
+
+def gate_type_label(gate):
+    if gate in ORDERED_GATES:
+        return "🔵 Ordered"
+    if gate == REFUGE_GATE:
+        return "🟡 Refuge"
+    return "⚪ Free"
+
+
+@st.cache_data
+def build_gate_visit_order(_raw, _gates, radius=RADIUS_M):
+    """For every Race rider, return each gate's first-hit timestamp."""
+    gate_list = _gates["gate"].tolist()
+    rows = []
+    for rider in _raw["participants"]:
+        if rider["variant"] != "Race":
+            continue
+        pts = rider["points"]
+        name = f"{rider['first_name']} {rider['last_name']}"
+        if len(pts) < 2:
+            continue
+        lats   = np.array([p["lat"] for p in pts])
+        lons   = np.array([p["lon"] for p in pts])
+        ts     = pd.to_datetime([p["ts"] for p in pts])
+        R_m    = 6_371_000
+        for _, gate in _gates.iterrows():
+            dlat  = np.radians(gate["lat"] - lats)
+            dlon  = np.radians(gate["lon"] - lons)
+            a     = (np.sin(dlat / 2) ** 2
+                     + np.cos(np.radians(lats)) * np.cos(np.radians(gate["lat"]))
+                     * np.sin(dlon / 2) ** 2)
+            dists = R_m * 2 * np.arcsin(np.sqrt(a).clip(0, 1))
+            within = np.where(dists <= radius)[0]
+            if len(within):
+                rows.append({
+                    "name":       name,
+                    "gate":       gate["gate"],
+                    "visited_at": ts[within[0]],
+                })
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+
+    # Add visit order per rider (1 = first gate hit)
+    df = df.sort_values(["name", "visited_at"])
+    df["visit_order"] = df.groupby("name").cumcount() + 1
+    return df
+
+
 @st.cache_data
 def get_rider_track(_raw, rider_name):
     for r in _raw["participants"]:
@@ -212,9 +272,10 @@ def get_rider_track(_raw, rider_name):
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 
-raw         = load_raw()
-gates       = load_gates()
+raw              = load_raw()
+gates            = load_gates()
 race_df, gate_cols = build_race_df(raw, gates)
+visit_order_df   = build_gate_visit_order(raw, gates)
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -246,11 +307,12 @@ filtered_df = race_df[race_df["status"].isin(status_filter)]
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🏆 Leaderboard",
     "🚴 Rider Profile",
     "✅ Gate Compliance",
     "🗺️ Route Map",
+    "📋 Gate Order",
 ])
 
 # ── TAB 1: Leaderboard ────────────────────────────────────────────────────────
@@ -531,3 +593,123 @@ with tab4:
             ),
         )
         st.plotly_chart(fig_map, use_container_width=True)
+
+# ── TAB 5: Gate Order ─────────────────────────────────────────────────────────
+
+with tab5:
+    st.subheader("Gate Visit Order")
+    st.caption(
+        "🔵 Ordered — must be visited in sequence (Start → Brocken → Fredriksten → Suleskard)  "
+        "·  🟡 Refuge — required, any time (Botn Fjellstue)  "
+        "·  ⚪ Free — any order"
+    )
+
+    # ── Per-rider sequence ────────────────────────────────────────────────────
+    st.markdown(f"#### {selected_rider} — Gate Sequence")
+
+    rider_visits = visit_order_df[visit_order_df["name"] == selected_rider].copy()
+
+    if rider_visits.empty:
+        st.info("No gate visit data available for this rider.")
+    else:
+        rider_visits = rider_visits.sort_values("visit_order").reset_index(drop=True)
+
+        # Leg time = time since previous gate
+        rider_visits["leg_time"] = rider_visits["visited_at"].diff()
+        rider_visits["leg_hrs"]  = rider_visits["leg_time"].dt.total_seconds() / 3600
+
+        table_rows = []
+        for _, r in rider_visits.iterrows():
+            leg_str = (
+                f"{int(r['leg_hrs'] // 24)}d {int(r['leg_hrs'] % 24)}h"
+                if pd.notna(r["leg_hrs"]) and r["leg_hrs"] >= 24
+                else f"{r['leg_hrs']:.1f} hrs"
+                if pd.notna(r["leg_hrs"])
+                else "—"
+            )
+            table_rows.append({
+                "Stop #":      int(r["visit_order"]),
+                "Gate":        r["gate"],
+                "Type":        gate_type_label(r["gate"]),
+                "Visited At":  r["visited_at"].strftime("%d %b  %H:%M"),
+                "Leg Time":    leg_str,
+            })
+
+        st.dataframe(
+            pd.DataFrame(table_rows),
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Stop #":     st.column_config.NumberColumn(width="small"),
+                "Type":       st.column_config.TextColumn(width="small"),
+                "Leg Time":   st.column_config.TextColumn(width="small"),
+                "Visited At": st.column_config.TextColumn(width="medium"),
+            },
+        )
+
+    st.divider()
+
+    # ── All-finisher comparison heatmap ───────────────────────────────────────
+    st.markdown("#### All Finishers — Gate Visit Order Comparison")
+    st.caption("Numbers show the visit sequence (1 = first gate reached). Colour shows position — earlier = darker blue.")
+
+    finisher_names_ordered = (
+        race_df[race_df["status"] == "FINISHED"]
+        .sort_values("total_days")["name"]
+        .tolist()
+    )
+
+    pivot = (
+        visit_order_df[visit_order_df["name"].isin(finisher_names_ordered)]
+        .pivot(index="name", columns="gate", values="visit_order")
+        .reindex(index=finisher_names_ordered, columns=gate_cols)
+    )
+
+    # Short column labels
+    gate_short = {
+        "De Proloog, Amerongen": "Start",
+        "Brocken":               "Brocken",
+        "Fredriksten fortress":  "Fredriksten",
+        "Botn Fjellstue":        "Botn 🟡",
+        "Suleskard":             "Suleskard",
+        "Lysebotn":              "Lysebotn",
+        "Vøringfossen":          "Vøringfossen",
+        "Sognefjellet":          "Sognefjellet",
+        "Gaularfjellet":         "Gaularfjellet",
+        "Strynefjellsveg":       "Strynefjell",
+        "Borgund Stavkyrkje":    "Borgund",
+        "Urnes stavkyrkje":      "Urnes",
+        "Lom Stavkyrkje":        "Lom",
+        "Svøufallet":            "Svøufallet",
+        "Atlantic road":         "Atlantic Rd",
+        "Trollstigen":           "Trollstigen",
+        "Dalsnibba":             "Dalsnibba",
+        "Vestkapp":              "Vestkapp",
+        "Volda":                 "Volda",
+    }
+    pivot.columns = [gate_short.get(c, c) for c in pivot.columns]
+    pivot.index   = [
+        f"#{i+1}  {n}"
+        for i, n in enumerate(finisher_names_ordered)
+    ]
+
+    fig_ord = px.imshow(
+        pivot,
+        text_auto=True,
+        color_continuous_scale="Blues",
+        range_color=[1, 19],
+        aspect="auto",
+        template="plotly_dark",
+    )
+    fig_ord.update_coloraxes(showscale=False)
+    fig_ord.update_traces(
+        textfont=dict(size=9),
+        hovertemplate="Rider: %{y}<br>Gate: %{x}<br>Visit order: %{z}<extra></extra>",
+    )
+    fig_ord.update_layout(
+        height=max(500, len(finisher_names_ordered) * 22 + 140),
+        xaxis=dict(tickangle=-40, tickfont=dict(size=10), side="top"),
+        yaxis=dict(tickfont=dict(size=9)),
+        margin=dict(l=200, t=120, b=20),
+    )
+    st.plotly_chart(fig_ord, use_container_width=True)
