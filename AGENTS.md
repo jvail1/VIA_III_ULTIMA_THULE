@@ -62,7 +62,7 @@ Top-level keys: `event_slug`, `event_name`, `exported_at`, `participants`
 }
 ```
 
-**Total distance** = `pts[-1]["odo"] - pts[0]["odo"]`
+**Race distance** = odometer clipped to the race window (`t_start` → `t_finish`), not raw first/last odo. Raw odo inflates distance for riders whose trackers kept logging after finishing.
 
 ---
 
