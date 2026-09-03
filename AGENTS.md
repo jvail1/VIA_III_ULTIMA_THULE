@@ -201,10 +201,6 @@ Race started: **2026-07-24 ~05:30 UTC** at De Proloog, Amerongen (NL)
 
 ## Sharing / deployment
 
-The dashboard has not yet been deployed publicly. Options discussed:
-
-- **ngrok tunnel** — quickest for a temporary share; no data upload required
-- **Streamlit Community Cloud** — free, deploys from GitHub, shareable URL. Requires the 63 MB JSON to be committed to the repo (it's under GitHub's 100 MB limit). Use the **email allowlist** feature (free tier) for privacy — viewers must sign in with a matching Google or GitHub account.
-- **Posit Connect Cloud** — full auth, no need to commit data file; use the `connect-cloud-deploy` skill.
+Deployed on **Streamlit Community Cloud** — auto-deploys from `main` branch of the GitHub repo (`jvail1/VIA_III_ULTIMA_THULE`). Push to `main` to trigger a redeploy (~30–60 s).
 
 **Privacy note:** The export contains full GPS tracks + full names for 104 real people (European riders — GDPR applies). Consider limiting public exposure to finisher data only, or using viewer authentication before sharing broadly.
