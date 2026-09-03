@@ -1,6 +1,0 @@
-# GPS track opt-outs — one full name per line (First Last), case-sensitive.
-# Riders listed here will have their GPS tracks hidden from Route Map,
-# Rider Profile, and Route Heatmap. They remain in leaderboard and aggregate stats.
-#
-# Example:
-# Jane Smith
