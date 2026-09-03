@@ -582,7 +582,7 @@ def build_revisit_analysis(_raw, _gates, finisher_names, radius=RADIUS_M):
             elif len(gates_between) > 0:
                 category = "strategic_loop"
             else:
-                category = "detour_error"
+                continue  # no gates collected between visits — skip
 
             rows.append({
                 "rider":           name,
@@ -1507,9 +1507,7 @@ with tab9:
             "Suleskard (dead-end spur to Lysebotn), Dalsnibba (dead-end toll road above Geiranger), "
             "and Lysebotn (fjord-bottom dead end). All finishers must do these.\n\n"
             "**🔄 Strategic loop** — The rider visited ≥ 1 other gate between the two passes. "
-            "A deliberate circuit to collect multiple gates efficiently.\n\n"
-            "**⚠️ Detour / error** — No other gate collected between the two visits. "
-            "Could be a navigation error or GPS boundary noise."
+            "A deliberate circuit to collect multiple gates efficiently."
         )
 
     finisher_names_set = set(
@@ -1523,15 +1521,12 @@ with tab9:
         # ── Field-wide summary callout ────────────────────────────────────────
         total_structural = revisit_df[revisit_df["category"] == "structural"]["extra_km"].sum()
         total_loop       = revisit_df[revisit_df["category"] == "strategic_loop"]["extra_km"].sum()
-        total_error      = revisit_df[revisit_df["category"] == "detour_error"]["extra_km"].sum()
 
-        mc1, mc2, mc3 = st.columns(3)
+        mc1, mc2 = st.columns(2)
         mc1.metric("🔩 Structural km (all riders)", f"{total_structural:,.0f} km",
                    help="Road topology forces this — not avoidable")
         mc2.metric("🔄 Strategic loop km (all riders)", f"{total_loop:,.0f} km",
                    help="Deliberate loops to collect multiple gates")
-        mc3.metric("⚠️ Detour / error km (all riders)", f"{total_error:,.0f} km",
-                   help="No gates collected — possible navigation error")
 
         st.divider()
 
@@ -1541,18 +1536,17 @@ with tab9:
             .sum()
             .unstack(fill_value=0)
         )
-        for col in ("structural", "strategic_loop", "detour_error"):
+        for col in ("structural", "strategic_loop"):
             if col not in cat_pivot.columns:
                 cat_pivot[col] = 0
 
-        cat_pivot["total"] = cat_pivot[["structural", "strategic_loop", "detour_error"]].sum(axis=1)
+        cat_pivot["total"] = cat_pivot[["structural", "strategic_loop"]].sum(axis=1)
         cat_pivot = cat_pivot.sort_values("total", ascending=True)
 
         fig_rev = go.Figure()
         for col, label, color in [
-            ("structural",    "🔩 Structural",      "#5d6d7e"),
-            ("strategic_loop","🔄 Strategic loop",  "#3498db"),
-            ("detour_error",  "⚠️ Detour / error",  "#e74c3c"),
+            ("structural",    "🔩 Structural",     "#5d6d7e"),
+            ("strategic_loop","🔄 Strategic loop", "#3498db"),
         ]:
             fig_rev.add_trace(go.Bar(
                 y=cat_pivot.index,
@@ -1581,7 +1575,6 @@ with tab9:
         CAT_LABELS = {
             "structural":    "🔩 Structural",
             "strategic_loop": "🔄 Strategic loop",
-            "detour_error":  "⚠️ Detour / error",
         }
 
         disp = revisit_df[[
