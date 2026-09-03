@@ -452,6 +452,25 @@ def get_rider_track(_raw, rider_name):
     return pd.DataFrame()
 
 
+def break_gaps(df, gap_hours=6):
+    """Insert None rows at time gaps so Plotly doesn't draw straight lines across them."""
+    if df.empty or len(df) < 2 or "ts" not in df.columns:
+        return df
+    diffs = pd.to_datetime(df["ts"]).diff()
+    gap_positions = diffs[diffs > pd.Timedelta(hours=gap_hours)].index.tolist()
+    if not gap_positions:
+        return df
+    none_row = {c: None for c in df.columns}
+    parts = []
+    prev = 0
+    for pos in gap_positions:
+        parts.append(df.iloc[prev:pos])
+        parts.append(pd.DataFrame([none_row]))
+        prev = pos
+    parts.append(df.iloc[prev:])
+    return pd.concat(parts, ignore_index=True)
+
+
 @st.cache_data
 def get_all_finisher_tracks(_raw, finisher_names, n_pts=200):
     """Return dict of name → downsampled DataFrame for all finishers with tracks."""
@@ -466,7 +485,7 @@ def get_all_finisher_tracks(_raw, finisher_names, n_pts=200):
         if len(df) > n_pts:
             idx = np.round(np.linspace(0, len(df) - 1, n_pts)).astype(int)
             df = df.iloc[idx].reset_index(drop=True)
-        tracks[name] = df
+        tracks[name] = break_gaps(df)
     return tracks
 
 
@@ -798,6 +817,7 @@ with tab4:
             if len(track) > max_pts:
                 idx   = np.round(np.linspace(0, len(track) - 1, max_pts)).astype(int)
                 track = track.iloc[idx]
+            track = break_gaps(track)
 
             fig_map.add_trace(go.Scattermap(
                 lat=track["lat"], lon=track["lon"],
