@@ -457,7 +457,9 @@ def break_gaps(df, gap_hours=6):
     if df.empty or len(df) < 2 or "ts" not in df.columns:
         return df
     diffs = pd.to_datetime(df["ts"]).diff()
-    gap_positions = diffs[diffs > pd.Timedelta(hours=gap_hours)].index.tolist()
+    threshold = pd.Timedelta(hours=gap_hours)
+    # Use enumerate for positional (iloc) indices — df.index may not be 0..N after downsampling
+    gap_positions = [i for i, d in enumerate(diffs) if pd.notna(d) and d > threshold]
     if not gap_positions:
         return df
     none_row = {c: None for c in df.columns}
