@@ -308,7 +308,13 @@ def build_segments(raw, gates_df, finisher_names):
                [["leg", "rider", "avg_speed"]]
                .rename(columns={"rider": "fast_rider", "avg_speed": "fast_kmh"}))
 
-    summary = stats.merge(fastest, on="leg")
+    fastest_time = (df.dropna(subset=["elapsed_hrs"])
+                    .sort_values("elapsed_hrs", ascending=True)
+                    .groupby("leg", as_index=False).first()
+                    [["leg", "rider", "elapsed_hrs"]]
+                    .rename(columns={"rider": "fast_time_rider", "elapsed_hrs": "fast_time_hrs"}))
+
+    summary = stats.merge(fastest, on="leg").merge(fastest_time, on="leg")
 
     gate_visit_mean = {}
     for rider in raw["participants"]:
@@ -506,69 +512,135 @@ def build_pdf(out_path="via_race_26_executive_summary.pdf"):
     story.append(hi_tbl)
 
     # ── Fastest Segment Spotlight ─────────────────────────────────────────────
+    # Dynamic: top 5 legs by (fast_kmh − median_speed) spread, pulled directly
+    # from seg_summary so values are guaranteed consistent with the all-legs table.
     story.append(Spacer(1, 10))
     story.append(Paragraph("Fastest Segment Spotlights", sub_sty))
 
-    spot_data = [
-        ["Leg", "Character", "Fastest", "Best km/h", "Field median"],
-        ["Sognefjellet → Lom",
-         "~1,400 m descent off the highest road in Norway",
-         "Matthew Downie",  "38.7", "29.6"],
-        ["Suleskard → Lysebotn",
-         "High-alpine traverse to fjord bottom",
-         "Juhani Saario ⏱",  "20.3 (fastest time: 2.5 hrs)", "17.1"],
-        ["Start → Brocken",
-         "Opening flat blast across Germany",
-         "Lucas Becker",    "29.1", "25.6"],
-        ["Svøufallet → Atlantic Rd",
-         "Norwegian coastal rollers",
-         "Lucas Becker / Juhani Saario", "25.1", "21.9"],
-        ["Lysebotn → Botn",
-         "Long valley exit from Lysefjord",
-         "Matthew Downie",  "25.3", "18.3"],
-    ]
-    spot_col_w = [W * f for f in [0.22, 0.33, 0.22, 0.13, 0.10]]
-    spot_tbl   = Table(spot_data, colWidths=spot_col_w, repeatRows=1)
-    spot_tbl.setStyle(make_style(extra=[
+    LEG_CHAR = {
+        "Sognefjellet → Lom":    "~1,400 m descent off the highest road in Norway",
+        "Suleskard → Lysebotn":  "High-alpine traverse to fjord bottom",
+        "Start → Brocken":       "Opening flat blast across Germany",
+        "Svøufallet → Atlantic Rd": "Norwegian coastal rollers",
+        "Lysebotn → Botn":       "Long valley exit from Lysefjord",
+        "Brocken → Fredriksten": "Germany–Denmark–Norway push through Scandinavia",
+        "Fredriksten → Suleskard": "Norway entry — long fjord and valley climb",
+        "Vøringfossen → Borgund": "Hardangerfjord rim to inner valleys",
+        "Botn → Vøringfossen":   "Fjord valley climb to Hardanger plateau",
+        "Urnes → Gaularfjellet": "Sognefjord ferry approach and mountain pass",
+        "Vestkapp → Volda":      "Final coastal dash to the finish",
+    }
+
+    seg_summary["spread"] = seg_summary["fast_kmh"] - seg_summary["median_speed"]
+    top5 = seg_summary.nlargest(5, "spread")
+
+    spot_rows = [["Leg", "Character", "Fastest rider", "Best km/h", "Median km/h"]]
+    top5_idx  = []
+    for i, (_, row) in enumerate(top5.iterrows(), start=1):
+        # Note if fastest elapsed time belongs to a different rider
+        time_note = ""
+        if (pd.notna(row["fast_time_rider"])
+                and row["fast_time_rider"] != row["fast_rider"]):
+            time_note = f" (⏱ fastest time: {row['fast_rider']} — {row['fast_time_rider']} in {row['fast_time_hrs']:.1f} hrs)"
+        spot_rows.append([
+            row["leg"],
+            LEG_CHAR.get(row["leg"], ""),
+            row["fast_rider"],
+            f"{row['fast_kmh']:.1f}",
+            f"{row['median_speed']:.1f}",
+        ])
+        if row["spread"] == seg_summary["spread"].max():
+            top5_idx.append(i)
+
+    spot_col_w = [W * f for f in [0.22, 0.34, 0.22, 0.11, 0.11]]
+    spot_tbl   = Table(spot_rows, colWidths=spot_col_w, repeatRows=1)
+    extra_spot = [
         ("ALIGN", (1, 1), (1, -1), "LEFT"),
         ("ALIGN", (2, 1), (2, -1), "LEFT"),
-        ("BACKGROUND", (0, 1), (-1, 1), YLW_BG),  # Sognefjellet highlight
-    ]))
+    ]
+    for r in top5_idx:
+        extra_spot.append(("BACKGROUND", (0, r), (-1, r), YLW_BG))
+    spot_tbl.setStyle(make_style(extra=extra_spot))
     story.append(spot_tbl)
     story.append(Spacer(1, 3))
-    story.append(Paragraph(
-        "⏱ denotes fastest elapsed time on that leg, not necessarily highest moving speed.",
-        note_sty,
-    ))
+
+    # Note if Juhani had the fastest elapsed time on Suleskard→Lysebotn
+    sul_row = seg_summary[seg_summary["leg"] == "Suleskard → Lysebotn"]
+    if not sul_row.empty:
+        sr = sul_row.iloc[0]
+        if pd.notna(sr["fast_time_rider"]) and sr["fast_time_rider"] != sr["fast_rider"]:
+            story.append(Paragraph(
+                f"⏱ On Suleskard → Lysebotn, {sr['fast_rider']} recorded the highest moving speed "
+                f"({sr['fast_kmh']:.1f} km/h) but {sr['fast_time_rider']} completed the leg "
+                f"fastest overall ({sr['fast_time_hrs']:.1f} hrs) with fewer stops.",
+                note_sty,
+            ))
+
+    # ── Matthew Downie segment dominance callout ──────────────────────────────
+    downie_legs = seg_summary[seg_summary["fast_rider"] == "Matthew Downie"]
+    n_downie    = len(downie_legs)
+    n_total_legs = len(seg_summary)
+    if n_downie >= 2:
+        leg_list = ", ".join(
+            f"{row['leg']} ({row['fast_kmh']:.1f} km/h)"
+            for _, row in downie_legs.iterrows()
+        )
+        callout_text = (
+            f"<b>Matthew Downie — fastest on {n_downie} of {n_total_legs} common legs:</b> "
+            f"{leg_list}. "
+            f"He finished #{int(finishers[finishers['name']=='Matthew Downie']['rank'].iloc[0])} "
+            f"overall, demonstrating exceptional segment pace across the full breadth of the route."
+        )
+        callout_tbl = Table(
+            [[Paragraph(callout_text, callout_sty)]],
+            colWidths=[W],
+        )
+        callout_tbl.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), YLW_BG),
+            ("BOX",           (0, 0), (-1, -1), 0.8, colors.HexColor("#e6b800")),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ]))
+        story.append(Spacer(1, 5))
+        story.append(callout_tbl)
 
     # ── All-leg segment summary ───────────────────────────────────────────────
     story.append(Spacer(1, 8))
     story.append(Paragraph("Gate-to-Gate Segment Analysis — All Common Legs", sub_sty))
     story.append(Paragraph(
         f"Legs shared by ≥ 20 of the {n_finishers} finishers. "
-        "Avg moving speed excludes time below 2 km/h.",
+        "Avg moving speed excludes time below 2 km/h. "
+        "★ = Matthew Downie fastest.",
         note_sty,
     ))
     story.append(Spacer(1, 3))
 
+    downie_leg_names = set(downie_legs["leg"].tolist())
     seg_header = ["Leg", "Riders", "Median km/h", "Fastest rider", "Best km/h"]
     seg_rows_data = [seg_header]
     hi_spread_rows = []
-    for i, row in seg_summary.iterrows():
-        spread = row["fast_kmh"] - row["median_speed"] if pd.notna(row["fast_kmh"]) else 0
+    downie_rows = []
+    for pos, (_, row) in enumerate(seg_summary.iterrows(), start=1):
+        leg_label = ("★ " + row["leg"]) if row["leg"] in downie_leg_names else row["leg"]
         seg_rows_data.append([
-            row["leg"],
+            leg_label,
             str(int(row["n_riders"])),
             f"{row['median_speed']:.1f}" if pd.notna(row["median_speed"]) else "—",
             row["fast_rider"],
             f"{row['fast_kmh']:.1f}"    if pd.notna(row["fast_kmh"])    else "—",
         ])
-        if spread >= 8:
-            hi_spread_rows.append(i + 1)
+        if row.get("spread", 0) >= 8:
+            hi_spread_rows.append(pos)
+        if row["leg"] in downie_leg_names:
+            downie_rows.append(pos)
 
     extra_seg = []
     for r in hi_spread_rows:
         extra_seg += [("BACKGROUND", (0, r), (-1, r), YLW_BG)]
+    for r in downie_rows:
+        extra_seg += [("FONTNAME", (3, r), (3, r), "Helvetica-Bold")]
 
     seg_col_w = [W * f for f in [0.30, 0.09, 0.14, 0.33, 0.12]]
     seg_tbl   = Table(seg_rows_data, colWidths=seg_col_w, repeatRows=1)
