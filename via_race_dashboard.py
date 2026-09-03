@@ -22,6 +22,23 @@ st.set_page_config(
     layout="wide",
 )
 
+# ── Password gate ─────────────────────────────────────────────────────────────
+# Password is stored in Streamlit Cloud secrets (Settings → Secrets: APP_PASSWORD = "...").
+# If no secret is configured the gate is skipped (safe for local development).
+
+_required_pw = st.secrets.get("APP_PASSWORD", "")
+if _required_pw:
+    if not st.session_state.get("authenticated"):
+        st.title("VIA Race III — Ultima Thule")
+        pw = st.text_input("Password", type="password")
+        if st.button("Enter"):
+            if pw == _required_pw:
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("Incorrect password")
+        st.stop()
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 DATA_PATH  = "via_race_26_export.json"
