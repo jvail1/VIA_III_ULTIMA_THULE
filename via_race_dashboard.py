@@ -1256,6 +1256,10 @@ with tab7:
     eff_df["time_rank"] = eff_df["elapsed_hrs"].rank().astype(int)
     eff_df["efficiency_score"] = ((eff_df["dist_rank"] + eff_df["time_rank"]) / 2).round(1)
 
+    # Rest metrics (total non-riding time = elapsed - ride_time)
+    eff_df["rest_hrs"] = (eff_df["elapsed_hrs"] - eff_df["ride_time_hrs"]).round(1)
+    eff_df["rest_pct"] = (eff_df["rest_hrs"] / eff_df["elapsed_hrs"] * 100).round(1)
+
     # Reference lines: median distance and median time
     med_dist = eff_df["total_dist_km"].median()
     med_time = eff_df["elapsed_hrs"].median()
@@ -1331,17 +1335,71 @@ with tab7:
 
     tbl_eff = eff_df[[
         "rank", "name", "total_dist_km", "elapsed_hrs",
+        "ride_time_hrs", "rest_hrs", "rest_pct",
         "avg_speed_kmh", "elev_gain_m", "dist_rank", "time_rank", "efficiency_score",
     ]].copy()
     tbl_eff.columns = [
         "Finish Rank", "Rider", "Distance (km)", "Elapsed (hrs)",
+        "Ride (hrs)", "Rest (hrs)", "Rest %",
         "Avg Speed (km/h)", "Elev Gain (m)", "Distance Rank", "Time Rank", "Efficiency Score",
     ]
     tbl_eff["Distance (km)"] = tbl_eff["Distance (km)"].map("{:,.0f}".format)
     tbl_eff["Elapsed (hrs)"] = tbl_eff["Elapsed (hrs)"].round(1)
     tbl_eff["Elev Gain (m)"] = tbl_eff["Elev Gain (m)"].map("{:,.0f}".format)
+    tbl_eff["Rest %"] = tbl_eff["Rest %"].map("{:.1f}%".format)
     tbl_eff = tbl_eff.sort_values("Efficiency Score")
     st.dataframe(tbl_eff, hide_index=True, use_container_width=True)
+
+    # ── Rest & Riding Balance ─────────────────────────────────────────────────
+    st.divider()
+    st.subheader("Rest & Riding Balance")
+    st.caption(
+        "Normalised to 100% of elapsed race time per rider, sorted by finish rank. "
+        "Rest = all non-moving time (eating, sleeping, mechanicals, etc.)."
+    )
+
+    rest_sorted = eff_df.sort_values("rank")
+    rest_sorted["label"] = rest_sorted.apply(
+        lambda r: f"#{int(r['rank'])}  {r['name']}", axis=1
+    )
+    ride_pct = (rest_sorted["ride_time_hrs"] / rest_sorted["elapsed_hrs"] * 100).round(1)
+
+    fig_rest = go.Figure()
+    fig_rest.add_trace(go.Bar(
+        y=rest_sorted["label"],
+        x=ride_pct,
+        orientation="h",
+        name="Riding",
+        marker_color="#3498db",
+        customdata=rest_sorted[["name", "rank", "ride_time_hrs", "rest_hrs", "rest_pct"]].values,
+        hovertemplate=(
+            "<b>%{customdata[0]}</b> · Rank #%{customdata[1]}<br>"
+            "Riding: %{customdata[2]:.1f} hrs (%{x:.1f}%)<br>"
+            "Rest: %{customdata[3]:.1f} hrs (%{customdata[4]:.1f}%)"
+            "<extra></extra>"
+        ),
+    ))
+    fig_rest.add_trace(go.Bar(
+        y=rest_sorted["label"],
+        x=rest_sorted["rest_pct"],
+        orientation="h",
+        name="Rest",
+        marker_color="#5d6d7e",
+        hovertemplate="Rest: %{x:.1f}%<extra></extra>",
+    ))
+    fig_rest.update_layout(
+        barmode="stack",
+        xaxis=dict(title="% of Elapsed Race Time", range=[0, 100]),
+        yaxis=dict(
+            categoryorder="array",
+            categoryarray=rest_sorted["label"].tolist()[::-1],
+        ),
+        legend=dict(orientation="h", x=0.4, xanchor="center", y=-0.06),
+        height=750,
+        template="plotly_dark",
+        margin=dict(l=220, r=40, t=20, b=40),
+    )
+    st.plotly_chart(fig_rest, use_container_width=True)
 
 # ── TAB 8: Route Heatmap ──────────────────────────────────────────────────────
 
