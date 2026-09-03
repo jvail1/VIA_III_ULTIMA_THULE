@@ -470,12 +470,22 @@ def get_all_finisher_tracks(_raw, finisher_names, n_pts=200):
     return tracks
 
 
+def load_optouts(path="optouts.txt"):
+    """Return set of rider names who have opted out of GPS track display."""
+    try:
+        lines = Path(path).read_text().splitlines()
+        return {l.strip() for l in lines if l.strip() and not l.startswith("#")}
+    except FileNotFoundError:
+        return set()
+
+
 # ── Load data ─────────────────────────────────────────────────────────────────
 
 raw                = load_raw()
 gates              = load_gates()
 race_df, gate_cols = build_race_df(raw, gates)
 visit_order_df     = build_gate_visit_order(raw, gates)
+optouts            = load_optouts()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -630,7 +640,9 @@ with tab2:
 
     st.divider()
 
-    if not track.empty:
+    if selected_rider in optouts:
+        st.info("GPS track data for this rider is not displayed at their request.")
+    elif not track.empty:
         # Clip to race window
         t_start  = rider_row["race_start"]
         t_finish = rider_row["race_finish"]
@@ -775,6 +787,8 @@ with tab4:
         fig_map = go.Figure()
 
         for rname in map_riders:
+            if rname in optouts:
+                continue
             track = get_rider_track(raw, rname)
             if track.empty:
                 continue
@@ -1241,7 +1255,7 @@ with tab8:
             .reset_index(drop=True)
         )
         finisher_rank_df["rank"] = range(1, len(finisher_rank_df) + 1)
-        finisher_names_hm = finisher_rank_df["name"].tolist()
+        finisher_names_hm = [n for n in finisher_rank_df["name"].tolist() if n not in optouts]
         n_fin = len(finisher_names_hm)
 
         all_tracks = get_all_finisher_tracks(raw, set(finisher_names_hm), n_pts=hm_res)
