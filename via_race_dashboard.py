@@ -273,6 +273,9 @@ ORDERED_GATES = [
 ]
 REFUGE_GATE = "Botn Fjellstue"
 
+# Gates where road topology forces an out-and-back — not navigator error
+STRUCTURAL_GATES = {"Suleskard", "Dalsnibba", "Lysebotn"}
+
 GATE_TYPE = {}  # populated after gate_cols is known
 
 
@@ -494,6 +497,107 @@ def get_all_finisher_tracks(_raw, finisher_names, n_pts=200):
     return tracks
 
 
+@st.cache_data
+def build_revisit_analysis(_raw, _gates, finisher_names, radius=RADIUS_M):
+    """
+    For every finisher, find gates visited more than once and classify each revisit:
+      structural    — road topology forces out-and-back (Suleskard, Dalsnibba, Lysebotn)
+      strategic_loop — rider collected ≥1 other gate between the two visits
+      detour_error   — no other gate collected between visits
+    Returns a DataFrame of revisit incidents.
+    """
+
+    def find_episodes(inside, ts_arr, odos_arr, min_time_gap_s=900, min_odo_gap_km=2.0):
+        raw_eps, in_ep = [], False
+        for i, ins in enumerate(inside):
+            if ins and not in_ep:
+                ep_start = i; in_ep = True
+            elif not ins and in_ep:
+                raw_eps.append((ep_start, i - 1)); in_ep = False
+        if in_ep:
+            raw_eps.append((ep_start, len(inside) - 1))
+        if len(raw_eps) <= 1:
+            return raw_eps
+        merged = [raw_eps[0]]
+        for curr in raw_eps[1:]:
+            prev = merged[-1]
+            gap_s  = float((ts_arr[curr[0]] - ts_arr[prev[1]]) / np.timedelta64(1, "s"))
+            gap_km = float(odos_arr[curr[0]] - odos_arr[prev[1]])
+            if gap_s < min_time_gap_s or gap_km < min_odo_gap_km:
+                merged[-1] = (prev[0], curr[1])
+            else:
+                merged.append(curr)
+        return merged
+
+    R_m = 6_371_000
+    rows = []
+
+    for rider in _raw["participants"]:
+        name = f"{rider['first_name']} {rider['last_name']}"
+        if name not in finisher_names or len(rider["points"]) < 2:
+            continue
+
+        pts    = rider["points"]
+        lats   = np.array([p["lat"] for p in pts])
+        lons   = np.array([p["lon"] for p in pts])
+        ts_arr = np.array(pd.to_datetime([p["ts"] for p in pts]))
+        odos   = np.array([p["odo"] for p in pts])
+
+        # First-hit odo for every gate (to detect which gates lie between episodes)
+        gate_first_odo = {}
+        for _, gate in _gates.iterrows():
+            dlat  = np.radians(gate["lat"] - lats)
+            dlon  = np.radians(gate["lon"] - lons)
+            a     = np.sin(dlat/2)**2 + np.cos(np.radians(lats)) * np.cos(np.radians(gate["lat"])) * np.sin(dlon/2)**2
+            dists = R_m * 2 * np.arcsin(np.sqrt(a).clip(0, 1))
+            within = np.where(dists <= radius)[0]
+            if len(within):
+                gate_first_odo[gate["gate"]] = float(odos[within[0]])
+
+        for _, gate in _gates.iterrows():
+            gname = gate["gate"]
+            dlat  = np.radians(gate["lat"] - lats)
+            dlon  = np.radians(gate["lon"] - lons)
+            a     = np.sin(dlat/2)**2 + np.cos(np.radians(lats)) * np.cos(np.radians(gate["lat"])) * np.sin(dlon/2)**2
+            dists = R_m * 2 * np.arcsin(np.sqrt(a).clip(0, 1))
+            inside = (dists <= radius)
+
+            eps = find_episodes(inside, ts_arr, odos)
+            if len(eps) <= 1:
+                continue
+
+            ep1_end_odo      = float(odos[eps[0][1]])
+            last_ep_start_odo = float(odos[eps[-1][0]])
+            extra_km = round(last_ep_start_odo - ep1_end_odo, 1)
+            if extra_km <= 0:
+                continue
+
+            gates_between = [
+                g for g, go in gate_first_odo.items()
+                if g != gname and ep1_end_odo < go < last_ep_start_odo
+            ]
+
+            if gname in STRUCTURAL_GATES:
+                category = "structural"
+            elif len(gates_between) > 0:
+                category = "strategic_loop"
+            else:
+                category = "detour_error"
+
+            rows.append({
+                "rider":           name,
+                "gate":            gname,
+                "gate_short":      GATE_SHORT.get(gname, gname),
+                "visits":          len(eps),
+                "extra_km":        extra_km,
+                "category":        category,
+                "gates_between":   ", ".join(GATE_SHORT.get(g, g) for g in gates_between),
+                "n_gates_between": len(gates_between),
+            })
+
+    return pd.DataFrame(rows)
+
+
 def load_optouts(path="optouts.txt"):
     """Return set of rider names who have opted out of GPS track display."""
     try:
@@ -564,7 +668,7 @@ filtered_df = race_df[race_df["status"].isin(status_filter)]
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "🏆 Leaderboard",
     "🚴 Rider Profile",
     "✅ Gate Compliance",
@@ -573,6 +677,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "⚡ Segments",
     "📐 Route Efficiency",
     "🌍 Route Heatmap",
+    "↩️ Gate Revisits",
 ])
 
 # ── TAB 1: Leaderboard ────────────────────────────────────────────────────────
@@ -1386,3 +1491,114 @@ with tab8:
         f"Showing {len(all_tracks)} finisher tracks · "
         f"double-click a legend entry to isolate that rider's route"
     )
+
+# ── TAB 9: Gate Revisits ──────────────────────────────────────────────────────
+
+with tab9:
+    st.subheader("Gate Revisits — Backtracking & Loop Analysis")
+    st.caption(
+        "Analysis of every instance where a finisher entered a gate's 1 km radius more than once. "
+        "Classified into three categories based on road topology and gates collected between visits."
+    )
+
+    with st.expander("Category definitions", expanded=False):
+        st.markdown(
+            "**🔩 Structural** — Gates where road topology forces an out-and-back: "
+            "Suleskard (dead-end spur to Lysebotn), Dalsnibba (dead-end toll road above Geiranger), "
+            "and Lysebotn (fjord-bottom dead end). All finishers must do these.\n\n"
+            "**🔄 Strategic loop** — The rider visited ≥ 1 other gate between the two passes. "
+            "A deliberate circuit to collect multiple gates efficiently.\n\n"
+            "**⚠️ Detour / error** — No other gate collected between the two visits. "
+            "Could be a navigation error or GPS boundary noise."
+        )
+
+    finisher_names_set = set(
+        race_df[race_df["status"] == "FINISHED"]["name"].tolist()
+    )
+    revisit_df = build_revisit_analysis(raw, gates, finisher_names_set)
+
+    if revisit_df.empty:
+        st.info("No gate revisits found among finishers.")
+    else:
+        # ── Field-wide summary callout ────────────────────────────────────────
+        total_structural = revisit_df[revisit_df["category"] == "structural"]["extra_km"].sum()
+        total_loop       = revisit_df[revisit_df["category"] == "strategic_loop"]["extra_km"].sum()
+        total_error      = revisit_df[revisit_df["category"] == "detour_error"]["extra_km"].sum()
+
+        mc1, mc2, mc3 = st.columns(3)
+        mc1.metric("🔩 Structural km (all riders)", f"{total_structural:,.0f} km",
+                   help="Road topology forces this — not avoidable")
+        mc2.metric("🔄 Strategic loop km (all riders)", f"{total_loop:,.0f} km",
+                   help="Deliberate loops to collect multiple gates")
+        mc3.metric("⚠️ Detour / error km (all riders)", f"{total_error:,.0f} km",
+                   help="No gates collected — possible navigation error")
+
+        st.divider()
+
+        # ── Per-rider stacked bar ─────────────────────────────────────────────
+        cat_pivot = (
+            revisit_df.groupby(["rider", "category"])["extra_km"]
+            .sum()
+            .unstack(fill_value=0)
+        )
+        for col in ("structural", "strategic_loop", "detour_error"):
+            if col not in cat_pivot.columns:
+                cat_pivot[col] = 0
+
+        cat_pivot["total"] = cat_pivot[["structural", "strategic_loop", "detour_error"]].sum(axis=1)
+        cat_pivot = cat_pivot.sort_values("total", ascending=True)
+
+        fig_rev = go.Figure()
+        for col, label, color in [
+            ("structural",    "🔩 Structural",      "#5d6d7e"),
+            ("strategic_loop","🔄 Strategic loop",  "#3498db"),
+            ("detour_error",  "⚠️ Detour / error",  "#e74c3c"),
+        ]:
+            fig_rev.add_trace(go.Bar(
+                y=cat_pivot.index,
+                x=cat_pivot[col],
+                orientation="h",
+                name=label,
+                marker_color=color,
+                hovertemplate=f"{label}: %{{x:.0f}} km<extra></extra>",
+            ))
+
+        fig_rev.update_layout(
+            barmode="stack",
+            xaxis_title="Extra km from revisits",
+            height=max(350, len(cat_pivot) * 26 + 80),
+            template="plotly_dark",
+            legend=dict(orientation="h", x=0.5, xanchor="center", y=-0.1),
+            margin=dict(l=200, r=40, t=10, b=60),
+        )
+        st.plotly_chart(fig_rev, use_container_width=True)
+
+        st.divider()
+
+        # ── Detail table ──────────────────────────────────────────────────────
+        st.subheader("Revisit Incidents")
+
+        CAT_LABELS = {
+            "structural":    "🔩 Structural",
+            "strategic_loop": "🔄 Strategic loop",
+            "detour_error":  "⚠️ Detour / error",
+        }
+
+        disp = revisit_df[[
+            "rider", "gate_short", "visits", "extra_km", "category", "n_gates_between", "gates_between"
+        ]].copy()
+        disp["category"] = disp["category"].map(CAT_LABELS)
+        disp = disp.sort_values(["category", "extra_km"], ascending=[True, False])
+        disp.columns = [
+            "Rider", "Gate", "Visits", "Extra km", "Category",
+            "Gates between visits", "Gates (names)",
+        ]
+
+        cat_filter = st.multiselect(
+            "Filter by category",
+            options=list(CAT_LABELS.values()),
+            default=list(CAT_LABELS.values()),
+            key="revisit_cat_filter",
+        )
+        disp = disp[disp["Category"].isin(cat_filter)]
+        st.dataframe(disp, hide_index=True, use_container_width=True)

@@ -171,6 +171,7 @@ To add another override, append to `OFFICIAL_FINISHER_OVERRIDES` in the dashboar
 | 🗺️ Route Map | GPS tracks (up to 10 riders) + mandatory gate markers, `open-street-map` tiles. Rider list respects status filter. |
 | 📋 Gate Order | Per-rider gate sequence table with leg times and type badges (🔵 Ordered / 🟡 Refuge / ⚪ Free), consensus route table, stop × gate popularity heatmap, all-finisher visit order comparison heatmap. Always finishers only. |
 | ⚡ Segments | Gate-to-gate speed analysis (11 common legs shared by ≥20 finishers). Strip chart + leg summary table. Always finishers only. |
+| ↩️ Gate Revisits | Categorised gate revisit analysis (finishers only). Three categories: 🔩 Structural (road topology forces out-and-back: Suleskard/Dalsnibba/Lysebotn), 🔄 Strategic loop (≥1 other gate collected between visits), ⚠️ Detour/error (no gates collected between visits). Field-wide summary metrics, per-rider stacked bar chart, filterable detail table. |
 
 **Sidebar controls:**
 - Status filter — with `help=` tooltip explaining which tabs it affects (Gate Compliance + Route Map only; Leaderboard/Segments/Gate Order are always finishers-only)
