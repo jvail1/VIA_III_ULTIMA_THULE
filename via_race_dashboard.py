@@ -50,9 +50,8 @@ KML_PATH   = "VIA Chapter III - RACE Route & Locations.kml"
 RADIUS_M   = 1000
 
 STATUS_COLORS = {
-    "FINISHED": "#2ecc71",
-    "DNF":      "#e74c3c",
-    "DNS":      "#95a5a6",
+    "FINISHED":    "#2ecc71",
+    "PARTICIPANT": "#e74c3c",
 }
 
 # Riders confirmed as official finishers by race organisers, overriding gate check.
@@ -147,14 +146,7 @@ def build_race_df(_raw, _gates):
         base = {"name": name, "bib": rider["bib"]}
 
         if len(pts) < 2:
-            row = {**base, "status": "DNS", "gates_hit": 0,
-                   "total_dist_km": None, "elev_gain_m": None,
-                   "avg_speed_kmh": None, "total_days": None,
-                   "ride_time_hrs": None, "race_start": None, "race_finish": None}
-            for g in gate_list:
-                row[g] = None
-            rows.append(row)
-            continue
+            continue  # no GPS data — exclude from dashboard
 
         lats   = np.array([p["lat"] for p in pts])
         lons   = np.array([p["lon"] for p in pts])
@@ -210,7 +202,7 @@ def build_race_df(_raw, _gates):
 
         status = (
             "FINISHED" if gates_hit == 19 and t_finish is not None
-            else "DNF"
+            else "PARTICIPANT"
         )
 
         row = {
@@ -629,8 +621,8 @@ with st.sidebar:
 
     status_filter = st.multiselect(
         "Status filter",
-        options=["FINISHED", "DNF", "DNS"],
-        default=["FINISHED", "DNF"],
+        options=["FINISHED", "PARTICIPANT"],
+        default=["FINISHED", "PARTICIPANT"],
         help=(
             "Filters the ✅ Gate Compliance matrix and the 🗺️ Route Map rider list. "
             "The 🏆 Leaderboard, ⚡ Segments, and 📋 Gate Order tabs always show "
@@ -661,8 +653,7 @@ with st.sidebar:
     col_a, col_b = st.columns(2)
     col_a.metric("Riders", len(race_df))
     col_b.metric("Finishers", (race_df["status"] == "FINISHED").sum())
-    col_a.metric("DNF", (race_df["status"] == "DNF").sum())
-    col_b.metric("DNS", (race_df["status"] == "DNS").sum())
+    col_a.metric("Participants", (race_df["status"] == "PARTICIPANT").sum())
 
 filtered_df = race_df[race_df["status"].isin(status_filter)]
 
