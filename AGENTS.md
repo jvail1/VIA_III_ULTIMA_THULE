@@ -203,4 +203,4 @@ Race started: **2026-07-24 ~05:30 UTC** at De Proloog, Amerongen (NL)
 
 Deployed on **Streamlit Community Cloud** — auto-deploys from `main` branch of the GitHub repo (`jvail1/VIA_III_ULTIMA_THULE`). Push to `main` to trigger a redeploy (~30–60 s).
 
-**Privacy note:** The export contains full GPS tracks + full names for 104 real people (European riders — GDPR applies). Consider limiting public exposure to finisher data only, or using viewer authentication before sharing broadly.
+**Privacy note:** The export contains full GPS tracks + full names for 104 real people (European riders — GDPR applies). The app is password-protected via `st.secrets["APP_PASSWORD"]`.
