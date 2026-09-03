@@ -187,14 +187,14 @@ def build_race_df(_raw, _gates):
         else:
             t_finish = None
 
-        # Distance & elevation (full track)
-        total_dist = round(pts[-1]["odo"] - pts[0]["odo"], 1)
-        elev_gain  = round(compute_elev_gain(pts))
-
-        # Time metrics clipped to race window
+        # Distance & elevation clipped to race window where possible
+        # (raw odo includes post-finish tracker movement if device kept logging)
         if t_start and t_finish:
-            in_race    = (ts >= t_start) & (ts <= t_finish)
+            in_race     = (ts >= t_start) & (ts <= t_finish)
             ts_r, spd_r = ts[in_race], speeds[in_race]
+            odos_r      = np.array([p["odo"] for p in pts])[in_race]
+            total_dist  = round(float(odos_r[-1] - odos_r[0]), 1) if len(odos_r) >= 2 else round(pts[-1]["odo"] - pts[0]["odo"], 1)
+            elev_gain   = round(compute_elev_gain([p for p, m in zip(pts, in_race) if m]))
             total_days  = (t_finish - t_start).total_seconds() / 86400
             if len(ts_r) >= 2:
                 dt_sec   = np.diff(ts_r).astype("timedelta64[s]").astype(float)
@@ -203,6 +203,9 @@ def build_race_df(_raw, _gates):
                 ride_hrs = None
             avg_speed = round(total_dist / ride_hrs, 1) if ride_hrs else None
         else:
+            in_race    = slice(None)
+            total_dist = round(pts[-1]["odo"] - pts[0]["odo"], 1)
+            elev_gain  = round(compute_elev_gain(pts))
             total_days = ride_hrs = avg_speed = None
 
         status = (
