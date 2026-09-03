@@ -590,6 +590,198 @@ def build_revisit_analysis(_raw, _gates, finisher_names, radius=RADIUS_M):
     return pd.DataFrame(rows)
 
 
+@st.cache_data
+def build_gate_arrivals(_raw, _gates_df, finisher_names):
+    """
+    For each finisher, find elapsed hours from race start to first arrival at each gate.
+    Returns DataFrame: index=rider name, columns=gate names (KML order), values=elapsed_hrs.
+    """
+    gate_list = _gates_df["gate"].tolist()
+    start_gate_row = _gates_df[_gates_df["gate"] == "De Proloog, Amerongen"].iloc[0]
+
+    result = {}
+    for rider in _raw["participants"]:
+        if rider["variant"] != "Race":
+            continue
+        name = f"{rider['first_name']} {rider['last_name']}"
+        if name not in finisher_names:
+            continue
+        pts = rider["points"]
+        if len(pts) < 2:
+            continue
+
+        lats = np.array([p["lat"] for p in pts])
+        lons = np.array([p["lon"] for p in pts])
+        ts   = pd.to_datetime([p["ts"] for p in pts])
+
+        t_start = first_gate_hit(lats, lons, ts, start_gate_row["lat"], start_gate_row["lon"])
+        if t_start is None:
+            continue
+
+        row_data = {}
+        for _, gate in _gates_df.iterrows():
+            t_hit = first_gate_hit(lats, lons, ts, gate["lat"], gate["lon"])
+            if t_hit is not None:
+                row_data[gate["gate"]] = (t_hit - t_start).total_seconds() / 3600
+            else:
+                row_data[gate["gate"]] = float("nan")
+        result[name] = row_data
+
+    if not result:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(result).T
+    df = df.reindex(columns=gate_list)
+    return df
+
+
+@st.cache_data
+def find_rest_stops(_raw, finisher_names, _race_df):
+    """
+    Find contiguous speed < 2 km/h runs lasting >= 45 minutes for each finisher.
+    Returns DataFrame: name, lat, lon, duration_hrs, elapsed_hrs_into_race.
+    """
+    rows = []
+    for rider in _raw["participants"]:
+        if rider["variant"] != "Race":
+            continue
+        name = f"{rider['first_name']} {rider['last_name']}"
+        if name not in finisher_names:
+            continue
+        pts = rider["points"]
+        if len(pts) < 2:
+            continue
+
+        rider_row = _race_df[_race_df["name"] == name]
+        if rider_row.empty:
+            continue
+        t_start  = rider_row.iloc[0]["race_start"]
+        t_finish = rider_row.iloc[0]["race_finish"]
+        if pd.isna(t_start) or pd.isna(t_finish):
+            continue
+
+        df_pts = pd.DataFrame(pts)
+        df_pts["ts"] = pd.to_datetime(df_pts["ts"])
+        df_pts = df_pts.sort_values("ts").reset_index(drop=True)
+        df_pts = df_pts[(df_pts["ts"] >= t_start) & (df_pts["ts"] <= t_finish)].reset_index(drop=True)
+
+        if len(df_pts) < 2:
+            continue
+
+        slow_mask = df_pts["speed"] < 2
+        in_stop   = False
+        stop_start_idx = None
+
+        for i in range(len(df_pts)):
+            if slow_mask.iloc[i] and not in_stop:
+                in_stop = True
+                stop_start_idx = i
+            elif not slow_mask.iloc[i] and in_stop:
+                stop_end_idx = i - 1
+                t0 = df_pts.loc[stop_start_idx, "ts"]
+                t1 = df_pts.loc[stop_end_idx,   "ts"]
+                dur_hrs = (t1 - t0).total_seconds() / 3600
+                if dur_hrs >= 0.75:  # 45 minutes
+                    stop_pts = df_pts.iloc[stop_start_idx:stop_end_idx + 1]
+                    rows.append({
+                        "name":                 name,
+                        "lat":                  float(stop_pts["lat"].mean()),
+                        "lon":                  float(stop_pts["lon"].mean()),
+                        "duration_hrs":         round(dur_hrs, 2),
+                        "elapsed_hrs_into_race": round((t0 - t_start).total_seconds() / 3600, 2),
+                    })
+                in_stop = False
+
+        # Handle stop that runs to end of race window
+        if in_stop and stop_start_idx is not None:
+            stop_end_idx = len(df_pts) - 1
+            t0 = df_pts.loc[stop_start_idx, "ts"]
+            t1 = df_pts.loc[stop_end_idx,   "ts"]
+            dur_hrs = (t1 - t0).total_seconds() / 3600
+            if dur_hrs >= 0.75:
+                stop_pts = df_pts.iloc[stop_start_idx:stop_end_idx + 1]
+                rows.append({
+                    "name":                 name,
+                    "lat":                  float(stop_pts["lat"].mean()),
+                    "lon":                  float(stop_pts["lon"].mean()),
+                    "duration_hrs":         round(dur_hrs, 2),
+                    "elapsed_hrs_into_race": round((t0 - t_start).total_seconds() / 3600, 2),
+                })
+
+    return pd.DataFrame(rows)
+
+
+@st.cache_data
+def build_climb_descend(_raw, finisher_names, _race_df):
+    """
+    For each finisher, compute average speed on climbing vs descending segments.
+    Returns DataFrame: name, avg_climb_kmh, avg_descend_kmh, climb_ratio, rank.
+    """
+    finisher_rank = (
+        _race_df[_race_df["status"] == "FINISHED"]
+        .dropna(subset=["total_days"])
+        .sort_values("total_days")
+        .reset_index(drop=True)
+    )
+    finisher_rank["rank"] = range(1, len(finisher_rank) + 1)
+    rank_map = dict(zip(finisher_rank["name"], finisher_rank["rank"]))
+
+    rows = []
+    for rider in _raw["participants"]:
+        if rider["variant"] != "Race":
+            continue
+        name = f"{rider['first_name']} {rider['last_name']}"
+        if name not in finisher_names:
+            continue
+        pts = rider["points"]
+        if len(pts) < 2:
+            continue
+
+        rider_row = _race_df[_race_df["name"] == name]
+        if rider_row.empty:
+            continue
+        t_start  = rider_row.iloc[0]["race_start"]
+        t_finish = rider_row.iloc[0]["race_finish"]
+
+        df_pts = pd.DataFrame(pts)
+        df_pts["ts"] = pd.to_datetime(df_pts["ts"])
+        df_pts = df_pts.sort_values("ts").reset_index(drop=True)
+
+        if pd.notna(t_start) and pd.notna(t_finish):
+            df_pts = df_pts[(df_pts["ts"] >= t_start) & (df_pts["ts"] <= t_finish)].reset_index(drop=True)
+
+        if len(df_pts) < 2:
+            continue
+
+        alts = df_pts["alt"].values.astype(float)
+        alts = np.where((alts < -100) | (alts > 2500), np.nan, alts)
+        alts = pd.Series(alts).ffill().bfill().values
+
+        speeds    = df_pts["speed"].values
+        elev_diff = np.diff(alts)
+        spd_pairs = speeds[:-1]
+
+        moving = spd_pairs > 2
+        climb_speeds   = spd_pairs[moving & (elev_diff > 2)]
+        descend_speeds = spd_pairs[moving & (elev_diff < -2)]
+
+        if len(climb_speeds) == 0 or len(descend_speeds) == 0:
+            continue
+
+        avg_climb   = round(float(climb_speeds.mean()),   2)
+        avg_descend = round(float(descend_speeds.mean()), 2)
+
+        rows.append({
+            "name":           name,
+            "avg_climb_kmh":  avg_climb,
+            "avg_descend_kmh": avg_descend,
+            "climb_ratio":    round(avg_climb / avg_descend, 3) if avg_descend > 0 else None,
+            "rank":           rank_map.get(name, 99),
+        })
+
+    return pd.DataFrame(rows)
+
+
 def load_optouts(path="optouts.txt"):
     """Return set of rider names who have opted out of GPS track display."""
     try:
@@ -659,7 +851,7 @@ filtered_df = race_df[race_df["status"].isin(status_filter)]
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs([
     "🏆 Leaderboard",
     "🚴 Rider Profile",
     "✅ Gate Compliance",
@@ -669,6 +861,9 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "📐 Route Efficiency",
     "🌍 Route Heatmap",
     "↩️ Gate Revisits",
+    "🏁 Race Positions",
+    "💤 Rest Locations",
+    "⛰️ Climb vs Descend",
 ])
 
 # ── TAB 1: Leaderboard ────────────────────────────────────────────────────────
@@ -1644,3 +1839,371 @@ with tab9:
         )
         disp = disp[disp["Category"].isin(cat_filter)]
         st.dataframe(disp, hide_index=True, use_container_width=True)
+
+# ── TAB 10: Race Positions ────────────────────────────────────────────────────
+
+with tab10:
+    st.subheader("Race Positions — F1-style Gate-by-Gate")
+    st.caption("Position at each mandatory gate, ranked by first arrival. Lines crossing = position changes.")
+
+    finisher_names_pos = race_df[race_df["status"] == "FINISHED"]["name"].tolist()
+
+    arrivals_df = build_gate_arrivals(raw, gates, finisher_names_pos)
+
+    if arrivals_df.empty:
+        st.info("No gate arrival data available.")
+    else:
+        gate_list_pos = gates["gate"].tolist()
+
+        # Build rank DataFrame: for each gate column, rank riders by elapsed_hrs
+        rank_df = arrivals_df.rank(axis=0, method="min")
+
+        # Determine final finish rank (by elapsed time at Volda / last gate)
+        # Use the last non-NaN gate or Volda specifically
+        finish_gate = "Volda"
+        if finish_gate in arrivals_df.columns:
+            finish_elapsed = arrivals_df[finish_gate]
+        else:
+            finish_elapsed = arrivals_df.iloc[:, -1]
+
+        final_rank = finish_elapsed.rank(method="min").fillna(len(finisher_names_pos) + 1)
+        n_riders   = len(finisher_names_pos)
+
+        # Short x-axis labels
+        x_labels = [GATE_SHORT.get(g, g) for g in gate_list_pos]
+        x_indices = list(range(len(gate_list_pos)))
+
+        import plotly.colors as pc_pos
+        cs_pos = pc_pos.get_colorscale("RdYlGn")
+
+        def rank_to_color_pos(rank_val, n):
+            t = 1.0 - (rank_val - 1) / max(n - 1, 1)
+            return pc_pos.sample_colorscale(cs_pos, t)[0]
+
+        fig_pos = go.Figure()
+
+        for rider_name in arrivals_df.index:
+            r_final = final_rank.get(rider_name, n_riders)
+            color   = rank_to_color_pos(r_final, n_riders)
+
+            y_vals        = []
+            x_vals        = []
+            hover_texts   = []
+
+            for xi, gate in enumerate(gate_list_pos):
+                elapsed = arrivals_df.loc[rider_name, gate]
+                pos     = rank_df.loc[rider_name, gate] if not pd.isna(elapsed) else None
+                if pd.isna(elapsed) or pos is None:
+                    y_vals.append(None)
+                    x_vals.append(xi)
+                    hover_texts.append(None)
+                else:
+                    y_vals.append(int(pos))
+                    x_vals.append(xi)
+                    elapsed_d = elapsed / 24
+                    hover_texts.append(
+                        f"<b>{rider_name}</b><br>"
+                        f"Gate: {GATE_SHORT.get(gate, gate)}<br>"
+                        f"Position: #{int(pos)}<br>"
+                        f"Elapsed: {elapsed:.1f} hrs ({elapsed_d:.2f} days)"
+                    )
+
+            fig_pos.add_trace(go.Scatter(
+                x=x_vals,
+                y=y_vals,
+                mode="lines+markers",
+                name=f"#{int(r_final)} {rider_name}",
+                line=dict(color=color, width=1.5),
+                marker=dict(size=5, color=color),
+                hovertemplate="%{text}<extra></extra>",
+                text=hover_texts,
+                connectgaps=False,
+            ))
+
+        fig_pos.update_layout(
+            xaxis=dict(
+                tickmode="array",
+                tickvals=x_indices,
+                ticktext=x_labels,
+                tickangle=-40,
+                tickfont=dict(size=9),
+                title="Gate",
+            ),
+            yaxis=dict(
+                title="Position",
+                autorange="reversed",
+                dtick=1,
+                tickfont=dict(size=9),
+            ),
+            height=600,
+            template="plotly_dark",
+            legend=dict(
+                bgcolor="rgba(20,20,20,0.7)",
+                bordercolor="#444",
+                borderwidth=1,
+                font=dict(size=8),
+                x=1.01,
+                y=1,
+                xanchor="left",
+                yanchor="top",
+            ),
+            margin=dict(l=60, r=180, t=20, b=100),
+        )
+        st.plotly_chart(fig_pos, use_container_width=True)
+
+        # ── Leader at each gate ───────────────────────────────────────────────
+        st.subheader("Leader at Each Gate")
+        leader_rows = []
+        for gate in gate_list_pos:
+            col_data = arrivals_df[gate].dropna()
+            if col_data.empty:
+                continue
+            leader_name    = col_data.idxmin()
+            leader_elapsed = col_data.min()
+            leader_rows.append({
+                "Gate":         GATE_SHORT.get(gate, gate),
+                "Leader":       leader_name,
+                "Elapsed (hrs)": round(leader_elapsed, 1),
+                "Elapsed (days)": round(leader_elapsed / 24, 2),
+            })
+        if leader_rows:
+            st.dataframe(
+                pd.DataFrame(leader_rows),
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Gate":           st.column_config.TextColumn(width="small"),
+                    "Elapsed (hrs)":  st.column_config.NumberColumn(width="small"),
+                    "Elapsed (days)": st.column_config.NumberColumn(width="small"),
+                },
+            )
+
+# ── TAB 11: Rest Locations ────────────────────────────────────────────────────
+
+with tab11:
+    st.subheader("Rest Locations — Where Finishers Stopped")
+    st.caption("Stops where speed < 2 km/h for >= 45 minutes, clipped to race window.")
+
+    finisher_names_rest = race_df[race_df["status"] == "FINISHED"]["name"].tolist()
+    rest_df = find_rest_stops(raw, finisher_names_rest, race_df)
+
+    if rest_df.empty:
+        st.info("No rest stop data available.")
+    else:
+        # ── Field-wide summary ────────────────────────────────────────────────
+        total_stops   = len(rest_df)
+        median_dur    = rest_df["duration_hrs"].median()
+        longest_idx   = rest_df["duration_hrs"].idxmax()
+        longest_row   = rest_df.loc[longest_idx]
+
+        sc1, sc2, sc3 = st.columns(3)
+        sc1.metric("Total Rest Stops (all finishers)", total_stops)
+        sc2.metric("Median Stop Duration", f"{median_dur:.2f} hrs")
+        sc3.metric(
+            "Longest Stop",
+            f"{longest_row['duration_hrs']:.2f} hrs — {longest_row['name']}",
+        )
+
+        # Scale marker sizes by duration
+        dur_min = rest_df["duration_hrs"].min()
+        dur_max = rest_df["duration_hrs"].max()
+        dur_range = dur_max - dur_min if dur_max > dur_min else 1.0
+        marker_sizes = 6 + (rest_df["duration_hrs"] - dur_min) / dur_range * 24
+
+        fig_rest_map = go.Figure()
+        fig_rest_map.add_trace(go.Scattermap(
+            lat=rest_df["lat"],
+            lon=rest_df["lon"],
+            mode="markers",
+            marker=dict(
+                size=marker_sizes,
+                color=rest_df["elapsed_hrs_into_race"],
+                colorscale="Viridis",
+                colorbar=dict(
+                    title="Hours into Race",
+                    thickness=14,
+                    len=0.6,
+                ),
+                opacity=0.8,
+            ),
+            customdata=rest_df[["name", "duration_hrs", "elapsed_hrs_into_race", "lat", "lon"]].values,
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Duration: %{customdata[1]:.2f} hrs<br>"
+                "Hours into race: %{customdata[2]:.1f}<br>"
+                "Lat: %{customdata[3]:.4f}  Lon: %{customdata[4]:.4f}"
+                "<extra></extra>"
+            ),
+            name="Rest stops",
+        ))
+
+        fig_rest_map.update_layout(
+            map_style="open-street-map",
+            map=dict(center=dict(lat=58, lon=9), zoom=4),
+            height=600,
+            template="plotly_dark",
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
+        st.plotly_chart(fig_rest_map, use_container_width=True)
+
+        # ── Top 20 longest stops table ────────────────────────────────────────
+        st.subheader("Longest Rest Stops (Top 20)")
+        top20 = (
+            rest_df.sort_values("duration_hrs", ascending=False)
+            .head(20)
+            .reset_index(drop=True)
+        )
+        top20_disp = top20[["name", "duration_hrs", "elapsed_hrs_into_race", "lat", "lon"]].copy()
+        top20_disp.columns = ["Rider", "Duration (hrs)", "Hours into Race", "Lat", "Lon"]
+        top20_disp["Duration (hrs)"]   = top20_disp["Duration (hrs)"].round(2)
+        top20_disp["Hours into Race"]  = top20_disp["Hours into Race"].round(1)
+        top20_disp["Lat"]              = top20_disp["Lat"].round(4)
+        top20_disp["Lon"]              = top20_disp["Lon"].round(4)
+        st.dataframe(top20_disp, hide_index=True, use_container_width=True)
+
+# ── TAB 12: Climb vs Descend ──────────────────────────────────────────────────
+
+with tab12:
+    st.subheader("Climb vs Descend Speed — Finisher Comparison")
+    st.caption(
+        "Average moving speed (km/h) on climbing vs descending segments. "
+        "Moving = speed > 2 km/h. Climbing = elev diff > 2 m/point. Descending = elev diff < -2 m/point."
+    )
+
+    finisher_names_cd = race_df[race_df["status"] == "FINISHED"]["name"].tolist()
+    cd_df = build_climb_descend(raw, finisher_names_cd, race_df)
+
+    if cd_df.empty:
+        st.info("No climb/descend data available.")
+    else:
+        # ── Scatter plot ──────────────────────────────────────────────────────
+        cd_df = cd_df.sort_values("rank").reset_index(drop=True)
+        n_cd  = len(cd_df)
+
+        fig_cd = go.Figure()
+
+        # Reference diagonal (x=y)
+        xy_min = min(cd_df["avg_climb_kmh"].min(), cd_df["avg_descend_kmh"].min()) * 0.95
+        xy_max = max(cd_df["avg_climb_kmh"].max(), cd_df["avg_descend_kmh"].max()) * 1.05
+        fig_cd.add_trace(go.Scatter(
+            x=[xy_min, xy_max],
+            y=[xy_min, xy_max],
+            mode="lines",
+            line=dict(color="rgba(255,255,255,0.25)", dash="dot", width=1.5),
+            showlegend=False,
+            hoverinfo="skip",
+        ))
+        fig_cd.add_annotation(
+            x=xy_max * 0.97, y=xy_max * 0.97,
+            text="Equal climb/descend speed",
+            showarrow=False,
+            font=dict(color="rgba(200,200,200,0.6)", size=10),
+            xanchor="right",
+        )
+
+        fig_cd.add_trace(go.Scatter(
+            x=cd_df["avg_climb_kmh"],
+            y=cd_df["avg_descend_kmh"],
+            mode="markers+text",
+            text=cd_df["name"].apply(lambda n: n.split()[-1]),
+            textposition="top center",
+            textfont=dict(size=8, color="rgba(200,200,200,0.7)"),
+            marker=dict(
+                color=cd_df["rank"],
+                colorscale="RdYlGn_r",
+                size=12,
+                colorbar=dict(title="Finish Rank", thickness=14, len=0.6),
+                line=dict(width=1, color="rgba(255,255,255,0.3)"),
+            ),
+            customdata=cd_df[["name", "rank", "avg_climb_kmh", "avg_descend_kmh", "climb_ratio"]].values,
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Finish rank: #%{customdata[1]}<br>"
+                "Avg climb speed: %{customdata[2]:.2f} km/h<br>"
+                "Avg descend speed: %{customdata[3]:.2f} km/h<br>"
+                "Climb/descend ratio: %{customdata[4]:.3f}"
+                "<extra></extra>"
+            ),
+            showlegend=False,
+        ))
+
+        fig_cd.add_annotation(
+            x=xy_min + (xy_max - xy_min) * 0.05,
+            y=xy_max * 0.98,
+            text="Faster descenders (above line)",
+            showarrow=False,
+            font=dict(color="rgba(100,180,255,0.6)", size=9),
+            xanchor="left",
+        )
+        fig_cd.add_annotation(
+            x=xy_max * 0.98,
+            y=xy_min + (xy_max - xy_min) * 0.05,
+            text="Faster climbers (below line)",
+            showarrow=False,
+            font=dict(color="rgba(100,255,150,0.6)", size=9),
+            xanchor="right",
+        )
+
+        fig_cd.update_layout(
+            xaxis=dict(title="Avg Climb Speed (km/h)"),
+            yaxis=dict(title="Avg Descend Speed (km/h)"),
+            height=500,
+            template="plotly_dark",
+            margin=dict(l=60, r=100, t=20, b=60),
+        )
+        st.plotly_chart(fig_cd, use_container_width=True)
+
+        # ── Side-by-side bar charts ───────────────────────────────────────────
+        bar_top = 15
+        col_climb, col_desc = st.columns(2)
+
+        with col_climb:
+            top_climb = cd_df.nlargest(bar_top, "avg_climb_kmh").sort_values("avg_climb_kmh")
+            fig_climb = go.Figure(go.Bar(
+                y=top_climb["name"].apply(lambda n: n.split()[-1] + f" (#{int(top_climb.loc[top_climb['name']==n,'rank'].iloc[0])})"),
+                x=top_climb["avg_climb_kmh"],
+                orientation="h",
+                marker_color="#3498db",
+                customdata=top_climb[["name", "rank", "avg_climb_kmh"]].values,
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b> · Rank #%{customdata[1]}<br>"
+                    "Avg climb speed: %{customdata[2]:.2f} km/h"
+                    "<extra></extra>"
+                ),
+            ))
+            fig_climb.update_layout(
+                title=f"Top {bar_top} — Climb Speed",
+                xaxis_title="Avg Climb Speed (km/h)",
+                height=450,
+                template="plotly_dark",
+                margin=dict(l=130, r=20, t=50, b=40),
+            )
+            st.plotly_chart(fig_climb, use_container_width=True)
+
+        with col_desc:
+            top_desc = cd_df.nlargest(bar_top, "avg_descend_kmh").sort_values("avg_descend_kmh")
+            fig_desc = go.Figure(go.Bar(
+                y=top_desc["name"].apply(lambda n: n.split()[-1] + f" (#{int(top_desc.loc[top_desc['name']==n,'rank'].iloc[0])})"),
+                x=top_desc["avg_descend_kmh"],
+                orientation="h",
+                marker_color="#3498db",
+                customdata=top_desc[["name", "rank", "avg_descend_kmh"]].values,
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b> · Rank #%{customdata[1]}<br>"
+                    "Avg descend speed: %{customdata[2]:.2f} km/h"
+                    "<extra></extra>"
+                ),
+            ))
+            fig_desc.update_layout(
+                title=f"Top {bar_top} — Descend Speed",
+                xaxis_title="Avg Descend Speed (km/h)",
+                height=450,
+                template="plotly_dark",
+                margin=dict(l=130, r=20, t=50, b=40),
+            )
+            st.plotly_chart(fig_desc, use_container_width=True)
+
+        st.caption(
+            "Note: Matthew Downie's position in each ranking reflects his overall pacing strategy — "
+            "check his placement in both climb and descend charts to see how his speed profile compares to the field."
+        )
