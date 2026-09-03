@@ -1877,8 +1877,9 @@ with tab10:
         cs_pos = pc_pos.get_colorscale("RdYlGn")
 
         def rank_to_color_pos(rank_val, n):
-            t = 1.0 - (rank_val - 1) / max(n - 1, 1)
-            return pc_pos.sample_colorscale(cs_pos, t)[0]
+            t = float(1.0 - (rank_val - 1) / max(n - 1, 1))
+            t = max(0.0, min(1.0, t))
+            return pc_pos.sample_colorscale(cs_pos, [t])[0]
 
         fig_pos = go.Figure()
 
