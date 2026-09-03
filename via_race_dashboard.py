@@ -431,6 +431,24 @@ def get_rider_track(_raw, rider_name):
     return pd.DataFrame()
 
 
+@st.cache_data
+def get_all_finisher_tracks(_raw, finisher_names, n_pts=200):
+    """Return dict of name → downsampled DataFrame for all finishers with tracks."""
+    tracks = {}
+    for r in _raw["participants"]:
+        name = f"{r['first_name']} {r['last_name']}"
+        if name not in finisher_names or not r.get("points"):
+            continue
+        df = pd.DataFrame(r["points"])
+        df["ts"] = pd.to_datetime(df["ts"])
+        df = df.sort_values("ts").reset_index(drop=True)
+        if len(df) > n_pts:
+            idx = np.round(np.linspace(0, len(df) - 1, n_pts)).astype(int)
+            df = df.iloc[idx].reset_index(drop=True)
+        tracks[name] = df
+    return tracks
+
+
 # ── Load data ─────────────────────────────────────────────────────────────────
 
 raw                = load_raw()
@@ -491,7 +509,7 @@ filtered_df = race_df[race_df["status"].isin(status_filter)]
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "🏆 Leaderboard",
     "🚴 Rider Profile",
     "✅ Gate Compliance",
@@ -499,6 +517,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📋 Gate Order",
     "⚡ Segments",
     "📐 Route Efficiency",
+    "🌍 Route Heatmap",
 ])
 
 # ── TAB 1: Leaderboard ────────────────────────────────────────────────────────
@@ -1167,3 +1186,143 @@ with tab7:
     tbl_eff["Elev Gain (m)"] = tbl_eff["Elev Gain (m)"].map("{:,.0f}".format)
     tbl_eff = tbl_eff.sort_values("Efficiency Score")
     st.dataframe(tbl_eff, hide_index=True, use_container_width=True)
+
+# ── TAB 8: Route Heatmap ──────────────────────────────────────────────────────
+
+with tab8:
+    st.subheader("Route Heatmap — All Finisher Tracks")
+    st.caption(
+        "Every finisher's GPS track overlaid. "
+        "Colour = finish rank (green #1 → red last). "
+        "Thick bright lines = where the fast riders went."
+    )
+
+    hm_col1, hm_col2 = st.columns([4, 1])
+
+    with hm_col2:
+        hm_res = st.slider(
+            "Track resolution (pts/rider)", 100, 500, 250, step=50,
+            help="Higher = smoother lines but slower to render",
+        )
+        hm_show_gates = st.toggle("Show mandatory gates", value=True, key="hm_gates")
+        hm_colorby = st.radio(
+            "Colour tracks by",
+            ["Finish rank", "Elapsed time (days)"],
+            index=0,
+            key="hm_colorby",
+        )
+
+    with hm_col1:
+        finisher_rank_df = (
+            race_df[race_df["status"] == "FINISHED"]
+            .dropna(subset=["total_days"])
+            .sort_values("total_days")
+            .reset_index(drop=True)
+        )
+        finisher_rank_df["rank"] = range(1, len(finisher_rank_df) + 1)
+        finisher_names_hm = finisher_rank_df["name"].tolist()
+        n_fin = len(finisher_names_hm)
+
+        all_tracks = get_all_finisher_tracks(raw, set(finisher_names_hm), n_pts=hm_res)
+
+        # Build a continuous colour scale mapped to rank (1=best=green, n=worst=red)
+        import plotly.colors as pc
+        colorscale = pc.get_colorscale("RdYlGn")
+
+        def rank_to_color(rank, n):
+            # rank 1 → 1.0 (green end), rank n → 0.0 (red end)
+            t = 1.0 - (rank - 1) / max(n - 1, 1)
+            return pc.sample_colorscale(colorscale, t)[0]
+
+        fig_hm = go.Figure()
+
+        for name in finisher_names_hm:
+            track = all_tracks.get(name)
+            if track is None or track.empty:
+                continue
+
+            row = finisher_rank_df[finisher_rank_df["name"] == name].iloc[0]
+            rank = int(row["rank"])
+            days = float(row["total_days"])
+
+            if hm_colorby == "Finish rank":
+                color = rank_to_color(rank, n_fin)
+                label = f"#{rank} {name}"
+            else:
+                color = rank_to_color(rank, n_fin)  # still rank-ordered, days in hover
+                label = f"{name} ({days:.1f}d)"
+
+            fig_hm.add_trace(go.Scattermap(
+                lat=track["lat"],
+                lon=track["lon"],
+                mode="lines",
+                line=dict(color=color, width=2),
+                name=label,
+                hovertemplate=(
+                    f"<b>{name}</b><br>"
+                    f"Finish rank: #{rank}<br>"
+                    f"Elapsed: {days:.2f} days"
+                    "<extra></extra>"
+                ),
+                showlegend=True,
+            ))
+
+        if hm_show_gates:
+            fig_hm.add_trace(go.Scattermap(
+                lat=gates["lat"],
+                lon=gates["lon"],
+                mode="markers+text",
+                marker=dict(size=10, color="#f39c12"),
+                text=gates["gate"].map(lambda g: GATE_SHORT.get(g, g)),
+                textposition="top right",
+                name="Mandatory Gates",
+                hovertext=gates["gate"],
+                hoverinfo="text",
+                showlegend=True,
+            ))
+
+        # Colourbar legend via a dummy scatter (Scattermap doesn't support colorbar)
+        fig_hm.add_trace(go.Scatter(
+            x=[None], y=[None],
+            mode="markers",
+            marker=dict(
+                colorscale="RdYlGn",
+                cmin=n_fin, cmax=1,
+                color=[1],
+                colorbar=dict(
+                    title="Finish Rank",
+                    thickness=14,
+                    len=0.5,
+                    tickvals=[1, n_fin // 2, n_fin],
+                    ticktext=["#1", f"#{n_fin // 2}", f"#{n_fin}"],
+                    x=1.01,
+                ),
+                showscale=True,
+            ),
+            showlegend=False,
+        ))
+
+        fig_hm.update_layout(
+            map_style="carto-darkmatter",
+            map=dict(center=dict(lat=58, lon=9), zoom=4),
+            height=650,
+            template="plotly_dark",
+            margin=dict(l=0, r=0, t=0, b=0),
+            legend=dict(
+                bgcolor="rgba(20,20,20,0.75)",
+                bordercolor="#444",
+                borderwidth=1,
+                font=dict(size=9),
+                x=0.01, y=0.99,
+                xanchor="left", yanchor="top",
+                itemclick="toggle",
+                itemdoubleclick="toggleothers",
+            ),
+        )
+
+        st.plotly_chart(fig_hm, use_container_width=True)
+
+    st.caption(
+        f"Showing {len(all_tracks)} finisher tracks · "
+        f"double-click a legend entry to isolate that rider's route"
+    )
