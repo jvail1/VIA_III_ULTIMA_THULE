@@ -26,7 +26,11 @@ st.set_page_config(
 # Password is stored in Streamlit Cloud secrets (Settings → Secrets: APP_PASSWORD = "...").
 # If no secret is configured the gate is skipped (safe for local development).
 
-_required_pw = st.secrets.get("APP_PASSWORD", "")
+try:
+    _required_pw = st.secrets["APP_PASSWORD"]
+except (KeyError, FileNotFoundError):
+    _required_pw = ""
+
 if _required_pw:
     if not st.session_state.get("authenticated"):
         st.title("VIA Race III — Ultima Thule")
