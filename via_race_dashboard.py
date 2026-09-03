@@ -625,6 +625,13 @@ def build_gate_arrivals(_raw, _gates_df, finisher_names):
                 row_data[gate["gate"]] = (t_hit - t_start).total_seconds() / 3600
             else:
                 row_data[gate["gate"]] = float("nan")
+
+        # Patch Volda arrival for riders who missed the gate by ~1,700 m
+        # but have a confirmed official finish timestamp.
+        ovr_finish = OFFICIAL_FINISHER_OVERRIDES.get(name, {}).get("race_finish")
+        if ovr_finish is not None and pd.isna(row_data.get("Volda", float("nan"))):
+            row_data["Volda"] = (ovr_finish - t_start).total_seconds() / 3600
+
         result[name] = row_data
 
     if not result:
